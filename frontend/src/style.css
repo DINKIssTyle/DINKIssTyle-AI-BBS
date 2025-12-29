@@ -1,7 +1,5 @@
 /* Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved. */
 
-/* 새롬데이타맨/이야기 스타일 클래식 BBS CSS */
-
 :root {
     --bg-color: #001B33;
     --text-color: #FFFFFF;
@@ -497,6 +495,15 @@ body {
     font-family: inherit;
 }
 
+.btn-warning {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
 .btn-secondary {
     background: transparent;
     border: 1px solid var(--border-color);
@@ -525,6 +532,7 @@ body {
 }
 
 .btn-primary:hover,
+.btn-warning:hover,
 .btn-secondary:hover,
 .btn-success:hover,
 .btn-danger:hover {

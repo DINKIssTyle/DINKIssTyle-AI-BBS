@@ -78,6 +78,22 @@ func (a *App) startup(ctx context.Context) {
 	a.commentService = services.NewCommentService(a.db, a.userService)
 	a.llmService = services.NewLLMService()
 
+	// LLM 서비스에 프롬프트 Getter 주입
+	a.llmService.SetPromptGetters(
+		// promptGetter
+		func(key string) string {
+			return a.GetPrompt(key)
+		},
+		// mbtiGetter
+		func(mbti string) string {
+			// DB에서 직접 조회 (임시로 DB 연결을 매번 새로 하거나 App 메서드 사용)
+			// App의 GetMBTIDescriptions은 맵 전체를 반환하므로 비효율적일 수 있음.
+			// 하지만 여기서는 간단히 구현.
+			descs := a.GetMBTIDescriptions()
+			return descs[mbti]
+		},
+	)
+
 	// AI Activity Manager 초기화
 	a.activityManager = ai.NewActivityManager(
 		a.characterService,
@@ -112,6 +128,132 @@ func (a *App) startup(ctx context.Context) {
 
 	// 관리자 존재 여부 확인 및 자동 설정
 	a.ensureAdminExists()
+
+	// 프롬프트 테이블 초기화
+	a.initPromptTables()
+}
+
+// initPromptTables 프롬프트 관련 테이블 생성
+func (a *App) initPromptTables() {
+	db := a.db.GetDB()
+	if db == nil {
+		return
+	}
+
+	// prompts 테이블
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS prompts (
+		key_name TEXT PRIMARY KEY,
+		content TEXT NOT NULL
+	)`)
+	if err != nil {
+		log.Printf("[ERROR] prompts 테이블 생성 실패: %v", err)
+	}
+
+	// mbti_prompts 테이블
+	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS mbti_prompts (
+		mbti TEXT PRIMARY KEY,
+		content TEXT NOT NULL
+	)`)
+	if err != nil {
+		log.Printf("[ERROR] mbti_prompts 테이블 생성 실패: %v", err)
+	}
+}
+
+// GetPrompt 프롬프트 조회 (DB -> Default)
+func (a *App) GetPrompt(key string) string {
+	db := a.db.GetDB()
+	if db != nil {
+		var content string
+		err := db.QueryRow("SELECT content FROM prompts WHERE key_name = ?", key).Scan(&content)
+		if err == nil {
+			return content
+		}
+	}
+
+	// 기본값 반환
+	switch key {
+	case "system_role":
+		return models.DefaultSystemRole
+	case "nickname_gen":
+		return models.DefaultNicknamePrompt
+	case "post_instruction":
+		return models.DefaultPostInstruction
+	case "comment_instruction":
+		return models.DefaultCommentInstruction
+	case "reply_instruction":
+		return models.DefaultReplyInstruction
+	case "summary_instruction":
+		return models.DefaultSummaryInstruction
+	}
+	return ""
+}
+
+// SavePrompt 프롬프트 저장
+func (a *App) SavePrompt(key string, content string) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스 연결 안됨")
+	}
+
+	_, err := db.Exec("INSERT OR REPLACE INTO prompts (key_name, content) VALUES (?, ?)", key, content)
+	return err
+}
+
+// ResetPrompt 프롬프트 초기화 (DB 삭제)
+func (a *App) ResetPrompt(key string) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스 연결 안됨")
+	}
+
+	_, err := db.Exec("DELETE FROM prompts WHERE key_name = ?", key)
+	return err
+}
+
+// GetMBTIDescriptions MBTI 설명 전체 조회
+func (a *App) GetMBTIDescriptions() map[string]string {
+	// 기본값 복사
+	descs := make(map[string]string)
+	for k, v := range models.DefaultMBTIDescriptions {
+		descs[k] = v
+	}
+
+	db := a.db.GetDB()
+	if db != nil {
+		rows, err := db.Query("SELECT mbti, content FROM mbti_prompts")
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var mbti, content string
+				if err := rows.Scan(&mbti, &content); err == nil {
+					descs[mbti] = content
+				}
+			}
+		}
+	}
+	return descs
+}
+
+// SaveMBTIDescription MBTI 설명 저장
+func (a *App) SaveMBTIDescription(mbti string, content string) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스 연결 안됨")
+	}
+
+	_, err := db.Exec("INSERT OR REPLACE INTO mbti_prompts (mbti, content) VALUES (?, ?)", mbti, content)
+	return err
+}
+
+// ResetMBTIDescription MBTI 설명 초기화
+func (a *App) ResetMBTIDescription(mbti string) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스 연결 안됨")
+	}
+
+	_, err := db.Exec("DELETE FROM mbti_prompts WHERE mbti = ?", mbti)
+	return err
 }
 
 // ensureAdminExists 관리자가 없으면 첫 번째 유저를 관리자로 설정

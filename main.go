@@ -23,7 +23,7 @@ func main() {
 	// Wails 앱 실행
 	err := wails.Run(&options.App{
 		Title:     "DINKIssTyle AI BBS",
-		Width:     1024,
+		Width:     1330,
 		Height:    768,
 		MinWidth:  800,
 		MinHeight: 600,

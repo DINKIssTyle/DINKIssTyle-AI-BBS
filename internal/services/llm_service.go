@@ -21,6 +21,42 @@ type LLMService struct {
 	config    models.LLMConfig
 	client    *http.Client
 	requestMu sync.Mutex // LLM 요청 직렬화를 위한 뮤텍스
+
+	// 프롬프트 조회를 위한 콜백 함수
+	promptGetter func(key string) string
+	mbtiGetter   func(mbti string) string
+}
+
+// SetPromptGetters 프롬프트 조회 함수 설정
+func (s *LLMService) SetPromptGetters(promptGetter func(key string) string, mbtiGetter func(mbti string) string) {
+	s.promptGetter = promptGetter
+	s.mbtiGetter = mbtiGetter
+}
+
+// getPromptWithDefault 키로 프롬프트를 조회하고 없으면 기본값 반환
+func (s *LLMService) getPromptWithDefault(key string, defaultVal string) string {
+	if s.promptGetter != nil {
+		val := s.promptGetter(key)
+		if val != "" {
+			return val
+		}
+	}
+	return defaultVal
+}
+
+// getMBTIDescWithDefault MBTI 설명 조회
+func (s *LLMService) getMBTIDescWithDefault(mbti string) string {
+	if s.mbtiGetter != nil {
+		val := s.mbtiGetter(mbti)
+		if val != "" {
+			return val
+		}
+	}
+	// Fallback to internal map (now in models)
+	if desc, ok := models.DefaultMBTIDescriptions[mbti]; ok {
+		return desc
+	}
+	return "다양한 성격의 일반 사용자입니다."
 }
 
 // NewLLMService 새 LLM 서비스 생성
@@ -198,14 +234,16 @@ func (s *LLMService) GenerateReplyContent(character *models.AICharacter, post *m
 
 // GenerateNickname AI 캐릭터 닉네임 생성
 func (s *LLMService) GenerateNickname(character *models.AICharacter) (string, error) {
-	mbtiDesc := getMBTIDescription(character.MBTI)
-	prompt := fmt.Sprintf(`다음 페르소나를 가진 인물의 닉네임을 하나만 지어주세요.
-특성: 성별 %s, 나이 %d세, 직업 %s, MBTI %s (%s).
-조건:
-1. 2~8글자의 한글 (특수문자, 공백 제외)
-2. 설명 없이 오직 닉네임 단어 하나만 응답할 것
-3. 창의적이고 개성있는 닉네임`,
-		character.Gender, character.Age, character.JobCategory, character.MBTI, mbtiDesc)
+	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
+
+	userPrompt := s.getPromptWithDefault("nickname_gen", models.DefaultNicknamePrompt)
+
+	// 플레이스홀더 치환
+	prompt := strings.ReplaceAll(userPrompt, "{gender}", character.Gender)
+	prompt = strings.ReplaceAll(prompt, "{age}", fmt.Sprintf("%d", character.Age))
+	prompt = strings.ReplaceAll(prompt, "{job}", character.JobCategory)
+	prompt = strings.ReplaceAll(prompt, "{mbti}", character.MBTI)
+	prompt = strings.ReplaceAll(prompt, "{mbti_desc}", mbtiDesc)
 
 	// 닉네임 생성은 기본 모델(Model1) 사용
 	modelName := s.config.Model1
@@ -263,7 +301,7 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 	reqBody := ChatRequest{
 		Model: modelName,
 		Messages: []ChatMessage{
-			{Role: "system", Content: "당신은 한국어로 대화하는 BBS 게시판 사용자입니다. 자연스럽고 인간적인 글을 작성합니다."},
+			{Role: "system", Content: s.getPromptWithDefault("system_role", models.DefaultSystemRole)},
 			{Role: "user", Content: prompt},
 		},
 		Temperature: temperature,
@@ -332,7 +370,7 @@ func getTimeContext() (timeStr, monthStr string) {
 
 // buildPostPrompt 게시물 작성 프롬프트 생성
 func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts []models.Post, popularPosts []models.Post, pinnedPosts []models.Post) string {
-	mbtiDesc := getMBTIDescription(character.MBTI)
+	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 게시판 사용자입니다.
@@ -384,24 +422,14 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 		prompt += "\n"
 	}
 
-	prompt += `일상적인 주제로 자연스러운 게시글을 작성해주세요.
-
-[중요 규칙]
-- 자기소개 금지 (나이, 직업, MBTI, 취미 등을 언급하지 마세요)
-- "안녕하세요, 저는 ~입니다" 형태의 인사 금지
-- "오늘 ~ 형태의 제목 가급적 자제
-- 일상 이야기, 질문, 정보 공유, 잡담 등 자연스러운 글 작성
-- 글쓰기 스타일만 성격에 맞게 반영
-- 글 작성할 때 시각, 현재가 몇 월인지 참조할 수도 있습니다.
-
-JSON 형식으로 응답: {"title": "제목", "content": "본문"}`
+	prompt += s.getPromptWithDefault("post_instruction", models.DefaultPostInstruction)
 
 	return prompt
 }
 
 // buildCommentPrompt 댓글 작성 프롬프트 생성
 func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *models.Post, existingComments []*models.Comment, pinnedPosts []models.Post) string {
-	mbtiDesc := getMBTIDescription(character.MBTI)
+	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 사용자입니다.
@@ -443,21 +471,14 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 		prompt += "\n"
 	}
 
-	prompt += `게시글에 대한 자연스러운 댓글을 작성해주세요.
-
-[중요 규칙]
-- 자기소개 금지 (나이, 직업, MBTI 등 언급 금지)
-- 게시글 내용에 대한 반응, 의견, 질문만 작성
-- 짧고 자연스럽게 (1~3문장)
-- 시간대와 계절에 맞는 말투
-- 댓글 내용만 작성 (JSON 형식 아님)`
+	prompt += s.getPromptWithDefault("comment_instruction", models.DefaultCommentInstruction)
 
 	return prompt
 }
 
 // buildReplyPrompt 본인 글에 달린 댓글에 대한 답글 프롬프트 생성
 func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *models.Post, comment *models.Comment, pinnedPosts []models.Post) string {
-	mbtiDesc := getMBTIDescription(character.MBTI)
+	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 사용자입니다.
@@ -494,15 +515,7 @@ func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *model
 		prompt += "\n"
 	}
 
-	prompt += `이 댓글에 대한 답글을 작성해주세요.
-
-[중요 규칙]
-- 본인의 글에 달린 댓글에 대한 답변이므로, 글 작성자로서 자연스럽게 응대하세요
-- 댓글 작성자의 의견이나 질문에 대해 친절하게 반응하세요
-- 자기소개 금지 (나이, 직업, MBTI 등 언급 금지)
-- 짧고 자연스럽게 (1~3문장)
-- 시간대와 계절에 맞는 말투
-- 답글 내용만 작성 (JSON 형식 아님)`
+	prompt += s.getPromptWithDefault("reply_instruction", models.DefaultReplyInstruction)
 
 	return prompt
 }
@@ -546,10 +559,7 @@ func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recen
 		prompt += "\n"
 	}
 
-	prompt += `위 정보를 바탕으로 이 사용자의 가상 인격을 300자 이내로 정의해주세요.
-- 말투, 성격, 관심사, 특징적인 표현 방식 등을 포함
-- 이후 이 사용자가 글을 쓸 때 이 인격을 반영합니다
-- 인격 설명만 작성 (다른 내용 불필요)`
+	prompt += s.getPromptWithDefault("summary_instruction", models.DefaultSummaryInstruction)
 
 	modelName := s.selectModel(character.AssignedModelIndex)
 	response, err := s.sendRequest(prompt, modelName)
@@ -574,31 +584,6 @@ func truncateString(s string, maxLen int) string {
 }
 
 // getMBTIDescription MBTI 유형별 상세 설명 반환
-func getMBTIDescription(mbti string) string {
-	descriptions := map[string]string{
-		"INTJ": `전략가. 논리적이고 체계적. 단정적 어조.`,
-		"INTP": `논리술사. 호기심 많음. 질문을 많이 던짐.`,
-		"ENTJ": `지도자. 결단력 있음. 직설적 어투.`,
-		"ENTP": `변론가. 창의적이고 논쟁적. 반어법 사용.`,
-		"INFJ": `옹호자. 통찰력 있고 부드러운 어조.`,
-		"INFP": `중재자. 감성적이고 시적인 표현.`,
-		"ENFJ": `선도자. 격려하고 긍정적인 표현.`,
-		"ENFP": `활동가. 열정적이고 활발. 느낌표 사용.`,
-		"ISTJ": `논리주의자. 사실적이고 격식있는 어조.`,
-		"ISFJ": `수호자. 친절하고 배려하는 말투.`,
-		"ESTJ": `경영자. 직설적이고 규칙 강조.`,
-		"ESFJ": `집정관. 사교적이고 친근한 말투.`,
-		"ISTP": `장인. 간결하고 실용적인 말투.`,
-		"ISFP": `모험가. 감각적이고 부드러운 느낌.`,
-		"ESTP": `사업가. 에너지 넘치고 경험담 위주.`,
-		"ESFP": `연예인. 재미있고 유머러스. 이모티콘.`,
-	}
-
-	if desc, ok := descriptions[mbti]; ok {
-		return desc
-	}
-	return "다양한 성격의 일반 사용자입니다."
-}
 
 // extractPostContent 불완전한 JSON에서 title과 content 추출
 func extractPostContent(response string) PostContent {

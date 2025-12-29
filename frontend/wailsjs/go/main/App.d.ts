@@ -39,6 +39,8 @@ export function GetJobCategories():Promise<Array<string>>;
 
 export function GetLLMConfig():Promise<models.LLMConfig>;
 
+export function GetMBTIDescriptions():Promise<Record<string, string>>;
+
 export function GetMBTITypes():Promise<Array<string>>;
 
 export function GetPinnedPosts():Promise<Array<models.Post>>;
@@ -46,6 +48,8 @@ export function GetPinnedPosts():Promise<Array<models.Post>>;
 export function GetPost(arg1:number):Promise<models.Post>;
 
 export function GetPosts(arg1:number,arg2:number):Promise<models.PostList>;
+
+export function GetPrompt(arg1:string):Promise<string>;
 
 export function GetWebServerConfig():Promise<Record<string, any>>;
 
@@ -67,9 +71,17 @@ export function ReconnectDatabase():Promise<void>;
 
 export function ResetDatabase(arg1:string):Promise<void>;
 
+export function ResetMBTIDescription(arg1:string):Promise<void>;
+
+export function ResetPrompt(arg1:string):Promise<void>;
+
 export function SaveBBSConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:string):Promise<void>;
 
 export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number):Promise<void>;
+
+export function SaveMBTIDescription(arg1:string,arg2:string):Promise<void>;
+
+export function SavePrompt(arg1:string,arg2:string):Promise<void>;
 
 export function SetUserAdmin(arg1:number,arg2:boolean):Promise<void>;
 

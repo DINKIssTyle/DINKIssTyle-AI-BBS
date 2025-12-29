@@ -45,6 +45,10 @@ function initEventListeners() {
             if (tabId === 'ai') loadCharacters();
             if (tabId === 'server') loadWebConfig();
             if (tabId === 'bbs') loadBBSConfig();
+            if (tabId === 'ai-prompts') {
+                loadCompPrompts();
+                loadMBTIList();
+            }
         });
     });
 
@@ -128,6 +132,24 @@ function initEventListeners() {
         if (e.target.matches('.btn-delete-char')) {
             const id = parseInt(e.target.dataset.id);
             deleteCharacter(id);
+        }
+    });
+
+    // AI 프롬프트 관리 이벤트 위임
+    $('#tab-ai-prompts').addEventListener('click', (e) => {
+        if (e.target.matches('.btn-save-prompt')) {
+            saveCompPrompt(e.target.dataset.key);
+        }
+        if (e.target.matches('.btn-reset-prompt')) {
+            resetCompPrompt(e.target.dataset.key);
+        }
+        if (e.target.matches('.btn-save-mbti')) {
+            const mbti = e.target.dataset.mbti;
+            const input = e.target.closest('tr').querySelector('.input-mbti-desc');
+            saveMBTI(mbti, input.value);
+        }
+        if (e.target.matches('.btn-reset-mbti')) {
+            resetMBTI(e.target.dataset.mbti);
         }
     });
 }
@@ -637,6 +659,105 @@ async function saveBBSConfig() {
         await go.SaveBBSConfig(title, footer, theme, font, postsPerPage, timezone);
         showToast('게시판 설정이 저장되었습니다');
     } catch (e) { showToast('설정 저장 실패: ' + e, 'error'); }
+}
+
+// ---------------------------------------------------------
+// AI 프롬프트 관리
+// ---------------------------------------------------------
+
+const PROMPT_MAP = {
+    'nickname_gen': 'prompt-nickname',
+    'system_role': 'prompt-system',
+    'post_instruction': 'prompt-post',
+    'comment_instruction': 'prompt-comment',
+    'reply_instruction': 'prompt-reply',
+    'summary_instruction': 'prompt-summary'
+};
+
+async function loadCompPrompts() {
+    for (const [key, elementId] of Object.entries(PROMPT_MAP)) {
+        try {
+            const content = await go.GetPrompt(key);
+            $(`#${elementId}`).value = content;
+        } catch (e) {
+            console.error(`프롬프트 로드 실패 (${key}):`, e);
+            $(`#${elementId}`).value = "(로드 실패)";
+        }
+    }
+}
+
+async function saveCompPrompt(key) {
+    const elementId = PROMPT_MAP[key];
+    const content = $(`#${elementId}`).value;
+    try {
+        await go.SavePrompt(key, content);
+        showToast('프롬프트가 저장되었습니다.');
+    } catch (e) {
+        showToast('저장 실패: ' + e, 'error');
+    }
+}
+
+async function resetCompPrompt(key) {
+    if (!confirm('정말로 이 프롬프트를 기본값으로 초기화하시겠습니까?')) return;
+    try {
+        await go.ResetPrompt(key);
+        // 다시 로드하여 UI 갱신 (서버에서 기본값 반환)
+        const content = await go.GetPrompt(key);
+        const elementId = PROMPT_MAP[key];
+        $(`#${elementId}`).value = content;
+        showToast('기본값으로 초기화되었습니다.');
+    } catch (e) {
+        showToast('초기화 실패: ' + e, 'error');
+    }
+}
+
+async function loadMBTIList() {
+    try {
+        const descs = await go.GetMBTIDescriptions();
+        const tbody = $('#mbti-table tbody');
+        tbody.innerHTML = '';
+
+        // MBTI 순서 정렬 (알파벳순 등)
+        const mbtis = Object.keys(descs).sort();
+
+        mbtis.forEach(mbti => {
+            const desc = descs[mbti];
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="font-weight:bold;text-align:center;">${mbti}</td>
+                <td><input type="text" class="form-input input-mbti-desc" value="${desc.replace(/"/g, '&quot;')}" style="width:100%; min-width: 500px;"></td>
+                <td style="text-align:center;">
+                    <button class="btn-primary btn-save-mbti" data-mbti="${mbti}" style="font-size:12px;padding:4px 8px;">저장</button>
+                    <button class="btn-warning btn-reset-mbti" data-mbti="${mbti}" style="font-size:12px;padding:4px 8px;">초기화</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (e) {
+        console.error('MBTI 목록 로드 실패', e);
+        showToast('MBTI 목록을 불러오지 못했습니다.', 'error');
+    }
+}
+
+async function saveMBTI(mbti, content) {
+    try {
+        await go.SaveMBTIDescription(mbti, content);
+        showToast(`${mbti} 설명이 저장되었습니다.`);
+    } catch (e) {
+        showToast('저장 실패: ' + e, 'error');
+    }
+}
+
+async function resetMBTI(mbti) {
+    if (!confirm(`${mbti} 설명을 기본값으로 초기화하시겠습니까?`)) return;
+    try {
+        await go.ResetMBTIDescription(mbti);
+        // 전체 리로드하는게 속편함
+        loadMBTIList();
+        showToast('초기화되었습니다.');
+    } catch (e) {
+        showToast('초기화 실패: ' + e, 'error');
+    }
 }
 
 // 전역 함수 노출 (HTML onclick 이벤트용)
