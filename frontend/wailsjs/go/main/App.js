@@ -50,6 +50,10 @@ export function GetAllUsers() {
   return window['go']['main']['App']['GetAllUsers']();
 }
 
+export function GetAppMode() {
+  return window['go']['main']['App']['GetAppMode']();
+}
+
 export function GetBBSConfig() {
   return window['go']['main']['App']['GetBBSConfig']();
 }
@@ -124,6 +128,10 @@ export function Login(arg1, arg2) {
 
 export function Logout() {
   return window['go']['main']['App']['Logout']();
+}
+
+export function OpenCharacterManagerWindow() {
+  return window['go']['main']['App']['OpenCharacterManagerWindow']();
 }
 
 export function RecommendPost(arg1) {

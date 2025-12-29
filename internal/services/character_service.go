@@ -356,3 +356,30 @@ func (s *CharacterService) HasPersonaSummary(characterID int) (bool, error) {
 	}
 	return summary != "", nil
 }
+
+// GetCharacterWithPendingNickname "활동전AI"로 시작하는 닉네임을 가진 캐릭터 1명 조회
+func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacter, error) {
+	db := s.db.GetDB()
+	if db == nil {
+		return nil, errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	var c models.AICharacter
+	err := db.QueryRow(`
+		SELECT id, nickname, gender, age, birthdate, region, hobby, 
+		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
+		       persona_summary, assigned_model_index, is_active, post_count, comment_count
+		FROM ai_characters 
+		WHERE nickname LIKE '활동전AI%' AND is_active = 1
+		ORDER BY RANDOM()
+		LIMIT 1
+	`).Scan(
+		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
+		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
+		&c.PersonaSummary, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+	)
+	if err != nil {
+		return nil, err // 변경 대상 없음
+	}
+	return &c, nil
+}

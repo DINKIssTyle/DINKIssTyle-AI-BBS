@@ -5,6 +5,8 @@ package main
 import (
 	"embed"
 
+	"flag"
+
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -15,18 +17,38 @@ import (
 var assets embed.FS
 
 func main() {
-	println("[DEBUG] Main function started")
+	// 플래그 파싱
+	modePtr := flag.String("mode", "main", "Application mode: main or char_manager")
+	flag.Parse()
+
+	println("[DEBUG] Main function started. Mode:", *modePtr)
+
 	// 앱 인스턴스 생성
-	app := NewApp()
+	app := NewApp(*modePtr)
 	println("[DEBUG] App instance created")
+
+	// 윈도우 크기 및 제목 설정
+	title := "DINKIssTyle AI BBS"
+	width := 900
+	height := 700
+	minWidth := 900
+	minHeight := 700
+
+	if *modePtr == "char_manager" {
+		title = "AI 캐릭터 관리자 - DINKIssTyle AI BBS"
+		width = 1360
+		height = 900
+		minWidth = 1340
+		minHeight = 800
+	}
 
 	// Wails 앱 실행
 	err := wails.Run(&options.App{
-		Title:     "DINKIssTyle AI BBS",
-		Width:     1330,
-		Height:    768,
-		MinWidth:  800,
-		MinHeight: 600,
+		Title:     title,
+		Width:     width,
+		Height:    height,
+		MinWidth:  minWidth,
+		MinHeight: minHeight,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

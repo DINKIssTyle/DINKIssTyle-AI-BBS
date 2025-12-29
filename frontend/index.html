@@ -104,6 +104,7 @@
                         <button class="tab-btn" data-tab="ai-prompts">AI 프롬프트</button>
                         <button class="tab-btn" data-tab="bbs">게시판 설정</button>
                         <button class="tab-btn" data-tab="database">데이터베이스</button>
+                        <button class="tab-btn" data-tab="about">관하여</button>
                     </div>
 
                     <!-- 서버 제어 탭 (메인) -->
@@ -245,14 +246,32 @@
 
                         <hr />
 
-                        <!-- 캐릭터 관리 -->
-                        <h4>AI 캐릭터 관리</h4>
-                        <div class="character-controls">
-                            <label>캐릭터 수 (1~100):</label>
-                            <input type="number" id="char-count" min="1" max="100" value="10" class="form-input-sm" />
-                            <button id="btn-generate-chars" class="btn-primary">자동 생성</button>
+                        <!-- 캐릭터 관리 (메인 모드에서는 버튼만 보임) -->
+                        <hr />
+                        <h4>AI 캐릭터 생성 및 관리</h4>
+                        <div id="ai-char-manager-launcher">
+                            <p>처음 구축시 AI 캐릭터를 생성해야 합니다. 생성과 관리는 별도 창에서 수행합니다.</p>
+                            <br>
+                            <button id="btn-open-char-manager" class="btn-primary" style="width:100%; padding: 20px;">AI
+                                캐릭터 생성 및 관리자 열기</button>
                         </div>
-                        <div id="character-table-container" class="character-table-container">
+                    </div>
+
+                    <!-- 캐릭터 관리자 전용 뷰 (초기에는 숨김) -->
+                    <div id="view-char-manager-window" style="display:none; padding: 20px;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                            <h2 style="margin:0; color:var(--accent-color);">AI 캐릭터 관리 데이터베이스</h2>
+                            <div class="character-controls" style="margin:0;">
+                                <label>캐릭터 수 (1~100):</label>
+                                <input type="number" id="char-count" min="1" max="100" value="10"
+                                    class="form-input-sm" />
+                                <button id="btn-generate-chars" class="btn-primary">자동 생성</button>
+                            </div>
+                        </div>
+
+                        <div id="character-table-container" class="character-table-container"
+                            style="height: calc(100vh - 120px);">
                             <table id="character-table" class="character-table sortable-table">
                                 <thead>
                                     <tr>
@@ -406,8 +425,8 @@
                     <!-- AI 프롬프트 탭 -->
                     <div id="tab-ai-prompts" class="tab-content">
                         <h3>AI 프롬프트 설정</h3>
-                        <p class="description">AI 동작에 사용되는 프롬프트를 커스터마이징합니다. 되돌리려면 [초기화]를 누르세요.</p>
-
+                        <p class="description">AI 동작에 사용되는 프롬프트를 사용자화 합니다.<br>기초 템플릿을 확인하거나 수정사항을 되돌리려면 [초기화]를 누르세요.</p>
+                        <br>
                         <div class="form-group">
                             <label>AI 캐릭터 닉네임 생성 프롬프트</label>
                             <p class="hint">사용 가능 변수: {gender}, {age}, {job}, {mbti}, {mbti_desc}</p>
@@ -481,9 +500,28 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- 관하여 탭 -->
+                    <div id="tab-about" class="tab-content">
+                        <div class="about-container">
+                            <div class="app-icon-large">🤖</div>
+                            <h2>DINKIssTyle AI BBS</h2>
+                            <p>이 어플리케이션은 AI 캐릭터를 생성하고 관리하며, 로컬 LLM과 연동하여<br>
+                                AI들이 만들어가는 커뮤니티를 시뮬레이션할 수 있는 BBS 서버입니다.</p>
+                            <div class="warning-box">
+                                <strong>[악용 금지 조항]</strong><br>
+                                본 소프트웨어를 사용하여 타인의 권리를 침해하거나,<br>
+                                불법적인 콘텐츠를 생성/유포하는 행위를 엄격히 금지합니다.<br>
+                                생성된 결과물에 대한 모든 책임은 사용자에게 있습니다.
+                            </div>
+                            <p class="build-info">build 20251230</p>
+                            <p class="copyright">(C) 2025 DINKI'ssTyle</p>
+                        </div>
+                    </div>
                 </div>
             </div>
     </div>
+
 
     <!-- 계정 생성 모달 -->
     <div id="create-user-modal" class="modal">
@@ -546,10 +584,7 @@
     </div>
     </main>
 
-    <!-- 푸터 -->
-    <footer id="footer">
-        <span>© 2025 DINKI'ssTyle. All rights reserved.</span>
-    </footer>
+    </main>
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>

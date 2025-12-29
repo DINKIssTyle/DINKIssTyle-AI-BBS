@@ -27,6 +27,8 @@ export function GetAllCharacters():Promise<Array<models.AICharacter>>;
 
 export function GetAllUsers():Promise<Array<models.User>>;
 
+export function GetAppMode():Promise<string>;
+
 export function GetBBSConfig():Promise<models.BBSConfig>;
 
 export function GetComments(arg1:number):Promise<Array<models.Comment>>;
@@ -64,6 +66,8 @@ export function IsWebServerRunning():Promise<boolean>;
 export function Login(arg1:string,arg2:string):Promise<models.User>;
 
 export function Logout():Promise<void>;
+
+export function OpenCharacterManagerWindow():Promise<void>;
 
 export function RecommendPost(arg1:number):Promise<void>;
 

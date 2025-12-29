@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 
@@ -24,7 +25,8 @@ var schemaSQL string
 
 // App 메인 애플리케이션 구조체
 type App struct {
-	ctx context.Context
+	mode string // "main" or "char_manager"
+	ctx  context.Context
 
 	// Database
 	db *database.Database
@@ -44,8 +46,10 @@ type App struct {
 }
 
 // NewApp 새 앱 인스턴스 생성
-func NewApp() *App {
-	return &App{}
+func NewApp(mode string) *App {
+	return &App{
+		mode: mode,
+	}
 }
 
 // startup 앱 시작 시 호출
@@ -900,4 +904,20 @@ func (a *App) GetBBSConfig() models.BBSConfig {
 		}
 	}
 	return config
+}
+
+// GetAppMode 앱 실행 모드 반환
+func (a *App) GetAppMode() string {
+	return a.mode
+}
+
+// OpenCharacterManagerWindow 캐릭터 관리자 창(새 프로세스) 열기
+func (a *App) OpenCharacterManagerWindow() error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command(execPath, "-mode", "char_manager")
+	return cmd.Start()
 }

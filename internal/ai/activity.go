@@ -213,7 +213,7 @@ func (m *ActivityManager) browsingActivityLoop() {
 	}
 }
 
-// browseRandomPost 랜덤 게시물 조회 (조회수 증가)
+// browseRandomPost 랜덤 게시물 조회 (조회수 증가) + 활동전 닉네임 변경
 func (m *ActivityManager) browseRandomPost() {
 	// 최근 게시물 조회
 	postList, err := m.postService.GetPosts(1, 50, "", "")
@@ -230,6 +230,21 @@ func (m *ActivityManager) browseRandomPost() {
 	if err != nil {
 		log.Printf("조회수 증가 실패: %v\n", err)
 	}
+
+	// "활동전AI" 닉네임을 가진 캐릭터 찾아서 닉네임 변경 시도
+	m.updatePendingNicknames()
+}
+
+// updatePendingNicknames "활동전AI" 닉네임을 가진 캐릭터를 찾아 닉네임 변경
+func (m *ActivityManager) updatePendingNicknames() {
+	// "활동전AI"로 시작하는 닉네임을 가진 캐릭터 1명 조회
+	character, err := m.characterService.GetCharacterWithPendingNickname()
+	if err != nil || character == nil {
+		return // 변경 대상 없음
+	}
+
+	// 닉네임 업데이트
+	m.updateNicknameIfNeeded(character)
 }
 
 // createRandomPost 랜덤 캐릭터로 게시물 작성

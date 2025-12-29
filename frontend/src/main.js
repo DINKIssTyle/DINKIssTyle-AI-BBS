@@ -19,15 +19,114 @@ const $$ = (selector) => document.querySelectorAll(selector);
 
 // 초기화
 document.addEventListener('DOMContentLoaded', async () => {
+    // 앱 모드 확인
+    try {
+        const mode = await go.GetAppMode();
+        console.log("App Mode:", mode);
+
+        if (mode === 'char_manager') {
+            initCharManagerMode();
+        } else {
+            initMainMode();
+        }
+    } catch (e) {
+        console.error("Failed to get app mode:", e);
+        initMainMode(); // 기본 fallback
+    }
+});
+
+async function initMainMode() {
     initEventListeners();
     await checkLoginStatus();
     await checkDBStatus();
-
-    // 초기 데이터 로드
     loadWebConfig();
     loadLLMConfig();
     loadBBSConfig();
-});
+
+    // 새 창 열기 버튼 이벤트
+    const btnOpen = $('#btn-open-char-manager');
+    if (btnOpen) {
+        btnOpen.addEventListener('click', async () => {
+            try {
+                await go.OpenCharacterManagerWindow();
+            } catch (e) {
+                alert("새 창 열기 실패: " + e);
+            }
+        });
+    }
+}
+
+async function initCharManagerMode() {
+    // DOM 정리: 중복 ID 방지를 위해 사용하지 않는 메인 UI 요소들 제거
+    $('#header')?.remove();
+    $('.settings-tabs')?.remove();
+    $$('.tab-content').forEach(el => el.remove()); // 기존 탭들(tab-ai 포함) 제거
+
+    // 대시보드 뷰 스타일 정리 (부모 컨테이너) -> Flex item으로 변경되어야 함
+    const dashboard = $('#dashboard-view');
+    if (dashboard) {
+        dashboard.style.padding = '0';
+        dashboard.style.margin = '0';
+        dashboard.style.height = '100%'; // Full height
+        dashboard.style.flex = '1';
+        dashboard.style.overflow = 'hidden'; // 내부 스크롤 방지 (Manager view가 함)
+        dashboard.style.display = 'flex';
+        dashboard.style.flexDirection = 'column';
+    }
+
+    // 캐릭터 관리자 전용 뷰 설정 (Flexbox 풀스크린)
+    const managerView = $('#view-char-manager-window');
+    if (managerView) {
+        managerView.style.display = 'flex';
+        managerView.style.flexDirection = 'column';
+        managerView.style.flex = '1'; // 남은 공간 차지
+        managerView.style.width = '100%';
+        managerView.style.height = '100%';
+        managerView.style.minHeight = '0'; // Flex item shrinking fix
+        managerView.style.padding = '20px';
+        managerView.style.background = 'var(--bg-color)';
+        managerView.style.boxSizing = 'border-box';
+        // Position fixed 제거 -> App Layout(Footer)을 따름
+    }
+
+    // 테이블 컨테이너 설정 (남은 공간 모두 차지 + 스크롤)
+    const container = $('#character-table-container');
+    if (container) {
+        container.style.height = 'auto'; // 기존 인라인 스타일 무시
+        container.style.flex = '1';
+        container.style.overflowY = 'auto';
+        container.style.minHeight = '0'; // Flex item scroll fix
+        container.style.border = '1px solid var(--border-color)';
+    }
+
+    // 필수 이벤트 리스너만 바인딩
+    const btnGen = $('#btn-generate-chars');
+    if (btnGen) btnGen.addEventListener('click', generateCharacters);
+
+    const tbody = $('#character-tbody');
+    if (tbody) {
+        // 캐릭터 테이블 이벤트 위임 (삭제 등)
+        tbody.addEventListener('change', (e) => {
+            const tr = e.target.closest('tr');
+            if (tr && (e.target.matches('input') || e.target.matches('select'))) {
+                const btn = tr.querySelector('.btn-delete-char');
+                if (btn) {
+                    updateCharacter(parseInt(btn.dataset.id), tr);
+                }
+            }
+        });
+
+        tbody.addEventListener('click', (e) => {
+            if (e.target.matches('.btn-delete-char')) {
+                const id = parseInt(e.target.dataset.id);
+                deleteCharacter(id);
+            }
+        });
+    }
+
+    // 초기 데이터 로드
+    loadCharacters();
+}
 
 // 이벤트 리스너 초기화
 function initEventListeners() {
