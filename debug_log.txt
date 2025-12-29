@@ -1,0 +1,3 @@
+[DEBUG] Main function started
+[DEBUG] App instance created
+exit status 0xc000013a

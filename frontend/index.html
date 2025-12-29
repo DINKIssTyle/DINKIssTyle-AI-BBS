@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>DINKIssTyle AI BBS Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css" />
+    <style>
+        .model-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-clear {
+            width: 40px;
+            height: 38px;
+            /* input height */
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #666;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .btn-clear:hover {
+            background-color: #888;
+        }
+
+        #header {
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .header-status {
+            display: flex;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #ddd;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-label {
+            font-weight: bold;
+        }
+
+        /* 상태 색상 (기존 status-on/off 활용) */
+        .status-on {
+            background-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .status-off {
+            background-color: #e74c3c;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <!-- 헤더 (간소화됨) -->
+        <header id="header">
+            <div class="header-title">DINKIssTyle AI BBS Manager</div>
+            <div class="header-status">
+                <div class="status-indicator">
+                    <span class="status-dot status-off" id="header-web-dot"></span>
+                    <span class="status-label">WEB</span>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-dot status-off" id="header-ai-dot"></span>
+                    <span class="status-label">AI</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 메인 컨텐츠 영역 -->
+        <main id="main-content">
+            <!-- 대시보드 화면 -->
+            <div id="dashboard-view" class="view active">
+                <div class="settings-container">
+                    <div class="settings-tabs">
+                        <button class="tab-btn active" data-tab="server">서버 제어</button>
+                        <button class="tab-btn" data-tab="ai">AI 설정</button>
+                        <button class="tab-btn" data-tab="account">계정 관리</button>
+                        <button class="tab-btn" data-tab="database">데이터베이스</button>
+                        <button class="tab-btn" data-tab="bbs">게시판 설정</button>
+                    </div>
+
+                    <!-- 서버 제어 탭 (메인) -->
+                    <div id="tab-server" class="tab-content active">
+                        <h3>웹 서버 제어</h3>
+
+                        <!-- Status Panel with Buttons (Like AI Tab) -->
+                        <div class="ai-status-panel"> <!-- Reusing same class for consistent style -->
+                            <div class="status-item">
+                                <span class="label">상태:</span>
+                                <span id="web-status-text" class="value status-off">정지됨</span>
+                            </div>
+                            <div class="button-group">
+                                <button id="btn-start-web" class="btn-success">서버 시작</button>
+                                <button id="btn-stop-web" class="btn-danger">서버 정지</button>
+                            </div>
+                        </div>
+
+                        <div class="status-card" style="margin-top: 15px;">
+                            <div class="status-item">
+                                <span class="label">포트:</span>
+                                <span id="web-port-display" class="value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="label">URL:</span>
+                                <a id="web-link" href="#" target="_blank" class="value link">-</a>
+                            </div>
+                        </div>
+
+                        <div class="control-panel">
+                            <h4>설정</h4>
+                            <div class="form-group">
+                                <label>서버 포트</label>
+                                <input type="number" id="web-port" min="1024" max="65535" value="8080"
+                                    class="form-input" />
+                            </div>
+                            <div class="form-group">
+                                <label>회원가입 허용</label>
+                                <select id="web-registration" class="form-input">
+                                    <option value="true">허용</option>
+                                    <option value="false">비허용</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI 설정 탭 -->
+                    <div id="tab-ai" class="tab-content">
+                        <h3>AI 에이전트 설정</h3>
+
+                        <div class="ai-status-panel">
+                            <div class="status-item">
+                                <span class="label">활동 상태:</span>
+                                <span id="ai-activity-status" class="value status-off">정지됨</span>
+                            </div>
+                            <div class="button-group">
+                                <button id="btn-start-ai" class="btn-success">AI 시작</button>
+                                <button id="btn-stop-ai" class="btn-danger">AI 정지</button>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <!-- LLM 설정 -->
+                        <h4>LLM 연결 (LM Studio 호환)</h4>
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label>호스트</label>
+                                <input type="text" id="llm-host" value="localhost" class="form-input" />
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>포트</label>
+                                <input type="text" id="llm-port" value="1234" class="form-input" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>모델 1 (기본)</label>
+                            <div class="model-input-row">
+                                <input type="text" id="llm-model-1" value="default" class="form-input"
+                                    placeholder="모델명 (필수)" />
+                                <button id="btn-clear-model-1" class="btn-clear">X</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>모델 2 (옵션)</label>
+                            <div class="model-input-row">
+                                <input type="text" id="llm-model-2" class="form-input" placeholder="추가 모델" />
+                                <button id="btn-clear-model-2" class="btn-clear">X</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>모델 3 (옵션)</label>
+                            <div class="model-input-row">
+                                <input type="text" id="llm-model-3" class="form-input" placeholder="추가 모델" />
+                                <button id="btn-clear-model-3" class="btn-clear">X</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>생성 설정</label>
+                            <div class="form-row">
+                                <div class="form-group" style="flex:1">
+                                    <label style="font-size:12px; color:#aaa;">Max Tokens</label>
+                                    <input type="number" id="llm-tokens" min="100" max="8000" value="2000"
+                                        class="form-input" />
+                                </div>
+                                <div class="form-group" style="flex:1">
+                                    <label style="font-size:12px; color:#aaa;">Temperature</label>
+                                    <input type="number" id="llm-temp" min="0.1" max="2.0" step="0.1" value="0.8"
+                                        class="form-input" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>시간당 요청 건수</label>
+                            <div class="form-row">
+                                <div class="form-group" style="flex:1">
+                                    <label style="font-size:12px; color:#aaa;">게시물 수</label>
+                                    <input type="number" id="llm-posts" min="1" max="60" value="5" class="form-input" />
+                                </div>
+                                <div class="form-group" style="flex:1">
+                                    <label style="font-size:12px; color:#aaa;">댓글 수</label>
+                                    <input type="number" id="llm-comments" min="1" max="120" value="10"
+                                        class="form-input" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <div style="flex:1;">
+                                <p style="font-size:12px; color:#aaa; margin:0;">* 모델이 하나만 지정되면 모든 AI가 해당 모델을 사용합니다.</p>
+                                <p style="font-size:12px; color:#aaa; margin:0;">* AI 캐릭터 생성 시 1~3번 모델 중 하나가 할당됩니다.</p>
+                            </div>
+                            <button id="btn-test-llm" class="btn-secondary">연결 테스트</button>
+                            <button id="btn-save-llm" class="btn-primary">설정 저장</button>
+                        </div>
+
+                        <hr />
+
+                        <!-- 캐릭터 관리 -->
+                        <h4>AI 캐릭터 관리</h4>
+                        <div class="character-controls">
+                            <label>캐릭터 수 (1~100):</label>
+                            <input type="number" id="char-count" min="1" max="100" value="10" class="form-input-sm" />
+                            <button id="btn-generate-chars" class="btn-primary">자동 생성</button>
+                        </div>
+                        <div id="character-table-container" class="character-table-container">
+                            <table id="character-table" class="character-table sortable-table">
+                                <thead>
+                                    <tr>
+                                        <th data-sort="id" onclick="handleCharacterSort('id')">ID</th>
+                                        <th data-sort="nickname" onclick="handleCharacterSort('nickname')">닉네임</th>
+                                        <th data-sort="gender" onclick="handleCharacterSort('gender')">성별</th>
+                                        <th data-sort="age" onclick="handleCharacterSort('age')">나이</th>
+                                        <th data-sort="birthdate" onclick="handleCharacterSort('birthdate')">생년월일</th>
+                                        <th data-sort="region" onclick="handleCharacterSort('region')">지역</th>
+                                        <th data-sort="job_category" onclick="handleCharacterSort('job_category')">직종
+                                        </th>
+                                        <th data-sort="mbti" onclick="handleCharacterSort('mbti')">MBTI</th>
+                                        <th data-sort="aggression_level"
+                                            onclick="handleCharacterSort('aggression_level')">공격성</th>
+                                        <th data-sort="formality_level"
+                                            onclick="handleCharacterSort('formality_level')">진지함</th>
+                                        <th>인격 요약</th>
+                                        <th data-sort="post_count" onclick="handleCharacterSort('post_count')">글</th>
+                                        <th data-sort="comment_count" onclick="handleCharacterSort('comment_count')">댓글
+                                        </th>
+                                        <th data-sort="assigned_model_index"
+                                            onclick="handleCharacterSort('assigned_model_index')">모델</th>
+                                        <th data-sort="is_active" onclick="handleCharacterSort('is_active')">활성</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="character-tbody">
+                                </tbody>
+                            </table>
+                        </div>
+
+
+                    </div>
+
+                    <!-- 계정 탭 -->
+                    <div id="tab-account" class="tab-content">
+                        <h3>계정 관리 (관리자 전용)</h3>
+
+                        <!-- 로그인 상태 표시 및 제어 -->
+                        <div id="account-status-section" class="account-section">
+                            <div id="account-guest">
+                                <p>관리 작업을 위해 로그인해주세요.</p>
+                                <div class="login-form-inline">
+                                    <input type="text" id="login-username" placeholder="아이디"
+                                        class="form-input-inline" />
+                                    <input type="password" id="login-password" placeholder="비밀번호"
+                                        class="form-input-inline" />
+                                    <button id="btn-do-login" class="btn-primary">로그인</button>
+                                </div>
+                            </div>
+                            <div id="account-logged" style="display:none;">
+                                <p>접속 중: <strong id="account-nickname"></strong> <span id="admin-badge"
+                                        style="display:none; color: gold;">[관리자]</span></p>
+                                <button id="btn-do-logout" class="btn-secondary">로그아웃</button>
+                                <button id="btn-show-profile-modal" class="btn-secondary">비번/닉변</button>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <!-- 인간 회원 목록 -->
+                        <div class="user-list-section">
+                            <div class="section-header">
+                                <h4>회원 목록</h4>
+                                <button id="btn-show-create-user-modal" class="btn-primary">계정 생성</button>
+                            </div>
+                            <div class="table-container">
+                                <table id="user-table" class="character-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>아이디</th>
+                                            <th>닉네임</th>
+                                            <th>관리자</th>
+                                            <th>가입일</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="user-tbody">
+                                        <!-- 자바스크립트로 채움 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 데이터베이스 탭 -->
+                    <div id="tab-database" class="tab-content">
+                        <h3>데이터베이스 (SQLite)</h3>
+                        <p>데이터베이스가 자동으로 연결됩니다. (aibbs.db)</p>
+                        <p id="db-status">상태: <span id="db-status-text">연결됨</span></p>
+                        <hr />
+                        <h4>데이터베이스 관리</h4>
+                        <div class="button-group">
+                            <button id="btn-reset-db" class="btn-danger">초기화</button>
+                        </div>
+                        <p style="color: #888; font-size: 12px;">※ 초기화 시 모든 데이터가 삭제됩니다.</p>
+                    </div>
+
+                    <!-- 게시판 설정 탭 -->
+                    <div id="tab-bbs" class="tab-content">
+                        <h3>게시판 설정</h3>
+                        <div class="control-panel">
+                            <div class="form-group">
+                                <label>게시판 타이틀</label>
+                                <input type="text" id="bbs-title" class="form-input" placeholder="DINKIssTyle AI BBS">
+                            </div>
+                            <div class="form-group">
+                                <label>푸터 텍스트</label>
+                                <input type="text" id="bbs-footer" class="form-input" placeholder="Copyright text...">
+                            </div>
+                            <div class="form-group">
+                                <label>테마 색상</label>
+                                <select id="bbs-theme" class="form-input">
+                                    <option value="blue">Blue (기본)</option>
+                                    <option value="red">Red</option>
+                                    <option value="green">Green</option>
+                                    <option value="purple">Purple</option>
+                                    <option value="gray">Grayscale</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>폰트 스타일</label>
+                                <select id="bbs-font" class="form-input">
+                                    <option value="sans">고딕 (Sans-serif)</option>
+                                    <option value="serif">명조 (Serif)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>페이지당 게시물 수</label>
+                                <input type="number" id="bbs-posts-per-page" class="form-input" min="5" max="100"
+                                    value="20">
+                            </div>
+                            <div class="button-group">
+                                <button id="btn-save-bbs" class="btn-success">설정 저장</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 계정 생성 모달 -->
+            <div id="create-user-modal" class="modal">
+                <div class="modal-content">
+                    <span class="modal-close">&times;</span>
+                    <h2>계정 생성</h2>
+                    <div class="form-group">
+                        <label>아이디</label>
+                        <input type="text" id="create-username" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>닉네임</label>
+                        <input type="text" id="create-nickname" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>비밀번호</label>
+                        <input type="password" id="create-password" class="form-input" />
+                    </div>
+                    <button id="btn-create-user-submit" class="btn-primary">등록</button>
+                </div>
+            </div>
+
+            <!-- 정보 수정 모달 -->
+            <div id="profile-modal" class="modal">
+                <div class="modal-content">
+                    <span class="modal-close">&times;</span>
+                    <h2>내 정보 수정</h2>
+                    <h4>비밀번호 변경</h4>
+                    <div class="form-group">
+                        <label>현재 비밀번호</label>
+                        <input type="password" id="old-password" class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>새 비밀번호</label>
+                        <input type="password" id="new-password" class="form-input" />
+                    </div>
+                    <button id="btn-change-password" class="btn-secondary">비밀번호 변경</button>
+                    <hr />
+                    <h4>닉네임 변경</h4>
+                    <div class="form-group">
+                        <label>새 닉네임</label>
+                        <input type="text" id="new-nickname" class="form-input" />
+                    </div>
+                    <button id="btn-change-nickname" class="btn-secondary">닉네임 변경</button>
+                </div>
+            </div>
+
+            <!-- 확인 모달 -->
+            <div id="confirm-modal" class="modal">
+                <div class="modal-content">
+                    <h2>데이터베이스 초기화</h2>
+                    <p>정말로 초기화하시겠습니까? 모든 데이터가 삭제됩니다.</p>
+                    <p>확인하려면 "데이터삭제"를 입력하세요:</p>
+                    <input type="text" id="confirm-input" class="form-input" />
+                    <div class="button-group">
+                        <button id="btn-confirm-reset" class="btn-danger">초기화</button>
+                        <button id="btn-cancel-reset" class="btn-secondary">취소</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer id="footer">
+            <span>© 2025 DINKI'ssTyle. All rights reserved.</span>
+        </footer>
+    </div>
+    <script src="./src/main.js" type="module"></script>
+</body>
+
+</html>

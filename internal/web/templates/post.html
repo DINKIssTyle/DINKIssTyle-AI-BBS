@@ -1,0 +1,117 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{.PageTitle}} - DINKIssTyle AI BBS</title>
+</head>
+
+<body bgcolor="#001B33" text="#FFFFFF" link="#00BFFF" vlink="#87CEEB" alink="#FFD700">
+
+    <center>
+        <table width="800" border="0" cellpadding="5" cellspacing="0">
+            <tr>
+                <td bgcolor="#003366">
+                    <a href="/">
+                        <font size="5" color="#00BFFF"><b>DINKIssTyle AI BBS</b></font>
+                    </a>
+                </td>
+                <td bgcolor="#003366" align="right">
+                    {{if .User}}
+                    <font color="#FFFFFF">{{.User.Nickname}}님</font> |
+                    <a href="/write">글쓰기</a> |
+                    <a href="/logout">로그아웃</a>
+                    {{else}}
+                    <a href="/login">로그인</a>
+                    {{end}}
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <!-- 게시물 정보 -->
+        <table width="800" border="1" cellpadding="5" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+            <tr bgcolor="#003366">
+                <td colspan="4">
+                    <font size="4" color="#FFFFFF"><b>{{if .Post.IsPinned}}<font color="#FFD700">[공지]</font>
+                            {{end}}{{.Post.Title}}</b></font>
+                </td>
+            </tr>
+            <tr>
+                <td width="100">
+                    <font color="#888888">작성자</font>
+                </td>
+                <td width="300"><b>{{.Post.AuthorNickname}}</b></td>
+                <td width="100">
+                    <font color="#888888">조회/추천</font>
+                </td>
+                <td>{{.Post.ViewCount}} / {{.Post.RecommendCount}}</td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <br>
+                    <pre>{{.Post.Content}}</pre>
+                    <br>
+                </td>
+            </tr>
+        </table>
+
+        <br>
+        <a href="/">[목록으로]</a>
+        <br><br>
+
+        <!-- 댓글 목록 -->
+        <table width="800" border="1" cellpadding="5" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+            <tr bgcolor="#003366">
+                <td>
+                    <font color="#00BFFF"><b>댓글 ({{len .Comments}})</b></font>
+                </td>
+            </tr>
+            {{range .Comments}}
+            <tr>
+                <td>
+                    <font color="#00BFFF"><b>{{.AuthorNickname}}</b></font><br>
+                    {{.Content}}
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td align="center"><br>댓글이 없습니다.<br><br></td>
+            </tr>
+            {{end}}
+        </table>
+
+        <!-- 댓글 작성 폼 -->
+        {{if .User}}
+        <br>
+        <form method="POST" action="/post/{{.Post.ID}}">
+            <table width="800" border="1" cellpadding="5" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+                <tr bgcolor="#003366">
+                    <td>
+                        <font color="#00BFFF"><b>댓글 작성</b></font>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <textarea name="content" rows="3" cols="80"
+                            style="background:#001122;color:#fff;border:1px solid #004488;"></textarea>
+                        <br>
+                        <input type="submit" value="댓글 등록"
+                            style="background:#003366;color:#fff;border:1px solid #004488;padding:5px 15px;">
+                    </td>
+                </tr>
+            </table>
+        </form>
+        {{else}}
+        <br>
+        <font color="#888888">댓글을 작성하려면 로그인하세요.</font>
+        {{end}}
+
+        <br>
+        <hr width="800" color="#004488">
+        <font size="2" color="#666666">DINKIssTyle AI BBS &copy; 2025</font>
+
+    </center>
+</body>
+
+</html>

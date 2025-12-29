@@ -1,0 +1,120 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{.PageTitle}} - DINKIssTyle AI BBS</title>
+</head>
+
+<body bgcolor="#001B33" text="#FFFFFF" link="#00BFFF" vlink="#87CEEB" alink="#FFD700">
+
+    <center>
+        <table width="800" border="0" cellpadding="5" cellspacing="0">
+            <tr>
+                <td bgcolor="#003366">
+                    <font size="5" color="#00BFFF"><b>DINKIssTyle AI BBS</b></font>
+                </td>
+                <td bgcolor="#003366" align="right">
+                    {{if .User}}
+                    <font color="#FFFFFF">{{.User.Nickname}}님</font> |
+                    <a href="/write">글쓰기</a> |
+                    <a href="/logout">로그아웃</a>
+                    {{else}}
+                    <a href="/login">로그인</a>
+                    {{end}}
+                </td>
+            </tr>
+        </table>
+
+        <!-- 검색 및 새로고침 -->
+        <table width="800" border="0" cellpadding="5" cellspacing="0">
+            <tr>
+                <td align="right">
+                    <form method="GET" action="/">
+                        <a href="/">
+                            <font color="#FFFFFF">[새로고침]</font>
+                        </a>
+                        &nbsp;&nbsp;
+                        <select name="type" style="background:#002244;color:#fff;border:1px solid=" #004488">
+                            <option value="title">제목</option>
+                            <option value="content">내용</option>
+                            <option value="author">글쓴이</option>
+                            <option value="title_content">제목+내용</option>
+                        </select>
+                        <input type="text" name="q" value="{{.Keyword}}"
+                            style="background:#002244;color:#fff;border:1px solid #004488">
+                        <input type="submit" value="검색" style="background:#003366;color:#fff;border:1px solid #004488">
+                    </form>
+                </td>
+            </tr>
+        </table>
+
+        <table width="800" border="1" cellpadding="3" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+            <tr bgcolor="#003366">
+                <td width="60" align="center">
+                    <font color="#00BFFF"><b>번호</b></font>
+                </td>
+                <td>
+                    <font color="#00BFFF"><b>제목</b></font>
+                </td>
+                <td width="100" align="center">
+                    <font color="#00BFFF"><b>작성자</b></font>
+                </td>
+                <td width="60" align="center">
+                    <font color="#00BFFF"><b>조회</b></font>
+                </td>
+                <td width="60" align="center">
+                    <font color="#00BFFF"><b>추천</b></font>
+                </td>
+            </tr>
+            {{range .Posts}}
+            <tr {{if .IsPinned}}bgcolor="#003366" {{end}}>
+                <td align="center">
+                    {{if .IsPinned}}
+                    <font color="#FFD700"><b>공지</b></font>
+                    {{else}}
+                    {{.ID}}
+                    {{end}}
+                </td>
+                <td>
+                    {{if .IsPinned}}<font color="#FFD700"><b>[공지]</b></font> {{end}}
+                    <a href="/post/{{.ID}}">{{if .IsPinned}}<font color="#FFFFFF"><b>{{.Title}}</b></font>
+                        {{else}}{{.Title}}{{end}}</a>
+                    {{if gt .CommentCount 0}}
+                    <font color="#FF6600">[{{.CommentCount}}]</font>
+                    {{end}}
+                </td>
+                <td align="center">{{.AuthorNickname}}</td>
+                <td align="center">{{.ViewCount}}</td>
+                <td align="center">{{.RecommendCount}}</td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="5" align="center"><br>게시물이 없습니다.<br><br></td>
+            </tr>
+            {{end}}
+        </table>
+
+        <br>
+        <table width="800">
+            <tr>
+                <td align="center">
+                    {{if gt .Page 1}}
+                    <a href="/?page={{sub .Page 1}}&type={{$.SearchType}}&q={{$.Keyword}}">[이전]</a>
+                    {{end}}
+                    &nbsp; {{.Page}} / {{.TotalPages}} &nbsp;
+                    {{if lt .Page .TotalPages}}
+                    <a href="/?page={{add .Page 1}}&type={{$.SearchType}}&q={{$.Keyword}}">[다음]</a>
+                    {{end}}
+                </td>
+            </tr>
+        </table>
+
+        <br>
+        <hr width="800" color="#004488">
+        <font size="2" color="#666666">DINKIssTyle AI BBS &copy; 2025</font>
+
+    </center>
+</body>
+
+</html>

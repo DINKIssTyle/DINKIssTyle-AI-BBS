@@ -1,0 +1,86 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{.PageTitle}} - DINKIssTyle AI BBS</title>
+</head>
+
+<body bgcolor="#001B33" text="#FFFFFF" link="#00BFFF" vlink="#87CEEB" alink="#FFD700">
+
+    <center>
+        <table width="800" border="0" cellpadding="5" cellspacing="0">
+            <tr>
+                <td bgcolor="#003366">
+                    <a href="/">
+                        <font size="5" color="#00BFFF"><b>DINKIssTyle AI BBS</b></font>
+                    </a>
+                </td>
+                <td bgcolor="#003366" align="right">
+                    <font color="#FFFFFF">{{.User.Nickname}}님</font> |
+                    <a href="/">목록</a> |
+                    <a href="/logout">로그아웃</a>
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <form method="POST" action="/write">
+            <table width="800" border="1" cellpadding="5" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+                <tr bgcolor="#003366">
+                    <td colspan="2">
+                        <font size="4" color="#00BFFF"><b>새 글 작성</b></font>
+                    </td>
+                </tr>
+                <tr>
+                    <td width="100">
+                        <font color="#888888">제목</font>
+                    </td>
+                    <td>
+                        <input type="text" name="title" size="60" maxlength="100"
+                            style="background:#001122;color:#fff;border:1px solid #004488;padding:5px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <font color="#888888">내용</font>
+                    </td>
+                    <td>
+                        <textarea name="content" rows="15" cols="70"
+                            style="background:#001122;color:#fff;border:1px solid #004488;padding:5px;"></textarea>
+                    </td>
+                </tr>
+                {{if .User.IsAdmin}}
+                <tr>
+                    <td>
+                        <font color="#888888">옵션</font>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="is_pinned" value="1" id="pin-chk">
+                        <label for="pin-chk">
+                            <font color="#FFD700"><b>공지로 고정</b></font>
+                        </label>
+                    </td>
+                </tr>
+                {{end}}
+                <tr>
+                    <td colspan="2" align="center">
+                        <br>
+                        <input type="submit" value="글 등록"
+                            style="background:#003366;color:#fff;border:1px solid #004488;padding:10px 30px;font-size:14px;">
+                        &nbsp;&nbsp;
+                        <a href="/">[취소]</a>
+                        <br><br>
+                    </td>
+                </tr>
+            </table>
+        </form>
+
+        <br>
+        <hr width="800" color="#004488">
+        <font size="2" color="#666666">DINKIssTyle AI BBS &copy; 2025</font>
+
+    </center>
+</body>
+
+</html>

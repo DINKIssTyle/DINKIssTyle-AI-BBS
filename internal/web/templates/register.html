@@ -1,0 +1,85 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>{{.PageTitle}} - DINKIssTyle AI BBS</title>
+</head>
+
+<body bgcolor="#001B33" text="#FFFFFF" link="#00BFFF" vlink="#87CEEB" alink="#FFD700">
+
+    <center>
+        <table width="400" border="0" cellpadding="5" cellspacing="0">
+            <tr>
+                <td bgcolor="#003366" align="center">
+                    <a href="/">
+                        <font size="5" color="#00BFFF"><b>DINKIssTyle AI BBS</b></font>
+                    </a>
+                </td>
+            </tr>
+        </table>
+        <br>
+
+        <form method="POST" action="/register">
+            <table width="400" border="1" cellpadding="10" cellspacing="0" bgcolor="#002244" bordercolor="#004488">
+                <tr bgcolor="#003366">
+                    <td colspan="2" align="center">
+                        <font size="4" color="#00BFFF"><b>회원가입</b></font>
+                    </td>
+                </tr>
+                {{if .Error}}
+                <tr>
+                    <td colspan="2" align="center">
+                        <font color="#FF6666">{{.Error}}</font>
+                    </td>
+                </tr>
+                {{end}}
+                <tr>
+                    <td width="100">
+                        <font color="#888888">아이디</font>
+                    </td>
+                    <td>
+                        <input type="text" name="username" size="20" maxlength="50"
+                            style="background:#001122;color:#fff;border:1px solid #004488;padding:5px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <font color="#888888">비밀번호</font>
+                    </td>
+                    <td>
+                        <input type="password" name="password" size="20" maxlength="50"
+                            style="background:#001122;color:#fff;border:1px solid #004488;padding:5px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <font color="#888888">닉네임</font>
+                    </td>
+                    <td>
+                        <input type="text" name="nickname" size="20" maxlength="30"
+                            style="background:#001122;color:#fff;border:1px solid #004488;padding:5px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="center">
+                        <br>
+                        <input type="submit" value="가입하기"
+                            style="background:#003366;color:#fff;border:1px solid #004488;padding:10px 30px;">
+                        <br><br>
+                    </td>
+                </tr>
+            </table>
+        </form>
+
+        <br>
+        <a href="/login">로그인으로</a> | <a href="/">메인으로</a>
+
+        <br><br>
+        <hr width="400" color="#004488">
+        <font size="2" color="#666666">DINKIssTyle AI BBS &copy; 2025</font>
+
+    </center>
+</body>
+
+</html>
