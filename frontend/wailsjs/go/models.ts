@@ -71,6 +71,7 @@ export namespace models {
 	    theme: string;
 	    font: string;
 	    posts_per_page: number;
+	    timezone: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new BBSConfig(source);
@@ -83,6 +84,7 @@ export namespace models {
 	        this.theme = source["theme"];
 	        this.font = source["font"];
 	        this.posts_per_page = source["posts_per_page"];
+	        this.timezone = source["timezone"];
 	    }
 	}
 	export class Comment {

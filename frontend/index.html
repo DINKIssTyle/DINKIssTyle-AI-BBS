@@ -379,84 +379,95 @@
                                     <option value="serif">명조 (Serif)</option>
                                 </select>
                             </div>
-                            <div class="form-group">
-                                <label>페이지당 게시물 수</label>
-                                <input type="number" id="bbs-posts-per-page" class="form-input" min="5" max="100"
-                                    value="20">
-                            </div>
-                            <div class="button-group">
-                                <button id="btn-save-bbs" class="btn-success">설정 저장</button>
-                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>시간대 (Timezone)</label>
+                            <select id="bbs-timezone" class="form-select">
+                                <option value="Asia/Seoul">한국 표준시 (KST, UTC+9)</option>
+                                <option value="UTC">협정 세계시 (UTC)</option>
+                                <option value="America/New_York">미국 동부 (EST, UTC-5)</option>
+                                <option value="Europe/London">영국 (GMT, UTC+0)</option>
+                                <option value="Asia/Tokyo">일본 (JST, UTC+9)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>페이지당 게시물 수</label>
+                            <input type="number" id="bbs-posts-per-page" class="form-input" min="5" max="100"
+                                value="20">
+                        </div>
+                        <div class="button-group">
+                            <button id="btn-save-bbs" class="btn-success">설정 저장</button>
                         </div>
                     </div>
                 </div>
             </div>
+    </div>
 
-            <!-- 계정 생성 모달 -->
-            <div id="create-user-modal" class="modal">
-                <div class="modal-content">
-                    <span class="modal-close">&times;</span>
-                    <h2>계정 생성</h2>
-                    <div class="form-group">
-                        <label>아이디</label>
-                        <input type="text" id="create-username" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>닉네임</label>
-                        <input type="text" id="create-nickname" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>비밀번호</label>
-                        <input type="password" id="create-password" class="form-input" />
-                    </div>
-                    <button id="btn-create-user-submit" class="btn-primary">등록</button>
-                </div>
+    <!-- 계정 생성 모달 -->
+    <div id="create-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>계정 생성</h2>
+            <div class="form-group">
+                <label>아이디</label>
+                <input type="text" id="create-username" class="form-input" />
             </div>
-
-            <!-- 정보 수정 모달 -->
-            <div id="profile-modal" class="modal">
-                <div class="modal-content">
-                    <span class="modal-close">&times;</span>
-                    <h2>내 정보 수정</h2>
-                    <h4>비밀번호 변경</h4>
-                    <div class="form-group">
-                        <label>현재 비밀번호</label>
-                        <input type="password" id="old-password" class="form-input" />
-                    </div>
-                    <div class="form-group">
-                        <label>새 비밀번호</label>
-                        <input type="password" id="new-password" class="form-input" />
-                    </div>
-                    <button id="btn-change-password" class="btn-secondary">비밀번호 변경</button>
-                    <hr />
-                    <h4>닉네임 변경</h4>
-                    <div class="form-group">
-                        <label>새 닉네임</label>
-                        <input type="text" id="new-nickname" class="form-input" />
-                    </div>
-                    <button id="btn-change-nickname" class="btn-secondary">닉네임 변경</button>
-                </div>
+            <div class="form-group">
+                <label>닉네임</label>
+                <input type="text" id="create-nickname" class="form-input" />
             </div>
-
-            <!-- 확인 모달 -->
-            <div id="confirm-modal" class="modal">
-                <div class="modal-content">
-                    <h2>데이터베이스 초기화</h2>
-                    <p>정말로 초기화하시겠습니까? 모든 데이터가 삭제됩니다.</p>
-                    <p>확인하려면 "데이터삭제"를 입력하세요:</p>
-                    <input type="text" id="confirm-input" class="form-input" />
-                    <div class="button-group">
-                        <button id="btn-confirm-reset" class="btn-danger">초기화</button>
-                        <button id="btn-cancel-reset" class="btn-secondary">취소</button>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label>비밀번호</label>
+                <input type="password" id="create-password" class="form-input" />
             </div>
-        </main>
+            <button id="btn-create-user-submit" class="btn-primary">등록</button>
+        </div>
+    </div>
 
-        <!-- 푸터 -->
-        <footer id="footer">
-            <span>© 2025 DINKI'ssTyle. All rights reserved.</span>
-        </footer>
+    <!-- 정보 수정 모달 -->
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">&times;</span>
+            <h2>내 정보 수정</h2>
+            <h4>비밀번호 변경</h4>
+            <div class="form-group">
+                <label>현재 비밀번호</label>
+                <input type="password" id="old-password" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label>새 비밀번호</label>
+                <input type="password" id="new-password" class="form-input" />
+            </div>
+            <button id="btn-change-password" class="btn-secondary">비밀번호 변경</button>
+            <hr />
+            <h4>닉네임 변경</h4>
+            <div class="form-group">
+                <label>새 닉네임</label>
+                <input type="text" id="new-nickname" class="form-input" />
+            </div>
+            <button id="btn-change-nickname" class="btn-secondary">닉네임 변경</button>
+        </div>
+    </div>
+
+    <!-- 확인 모달 -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h2>데이터베이스 초기화</h2>
+            <p>정말로 초기화하시겠습니까? 모든 데이터가 삭제됩니다.</p>
+            <p>확인하려면 "데이터삭제"를 입력하세요:</p>
+            <input type="text" id="confirm-input" class="form-input" />
+            <div class="button-group">
+                <button id="btn-confirm-reset" class="btn-danger">초기화</button>
+                <button id="btn-cancel-reset" class="btn-secondary">취소</button>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <!-- 푸터 -->
+    <footer id="footer">
+        <span>© 2025 DINKI'ssTyle. All rights reserved.</span>
+    </footer>
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>

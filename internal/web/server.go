@@ -90,7 +90,18 @@ func (ws *WebServer) loadTemplates() {
 			}
 		},
 		"formatDate": func(t time.Time) string {
-			return t.Format("2006-01-02 15:04")
+			// 설정된 타임존으로 변환
+			loc, err := time.LoadLocation(ws.bbsConfig.Timezone)
+			if err != nil {
+				// 타임존 로드 실패 시 Asia/Seoul (KST) 고정
+				loc, _ = time.LoadLocation("Asia/Seoul")
+			}
+			if loc == nil {
+				loc = time.Local // 그래도 실패하면 시스템 로컬
+			}
+
+			// UTC 시간을 해당 타임존 시간으로 변환
+			return t.In(loc).Format("2006-01-02 15:04")
 		},
 	}
 

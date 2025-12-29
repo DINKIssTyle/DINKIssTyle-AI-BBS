@@ -172,9 +172,15 @@ const postTemplateClassic = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//
                 </td>
                 <td width="300"><b>{{.Post.AuthorNickname}}</b></td>
                 <td width="100">
+                    <font color="{{.ResultColors.VLinkColor}}">작성일</font>
+                </td>
+                <td>{{.Post.CreatedAt | formatDate}}</td>
+            </tr>
+            <tr>
+                <td width="100">
                     <font color="{{.ResultColors.VLinkColor}}">조회/추천</font>
                 </td>
-                <td>{{.Post.ViewCount}} / {{.Post.RecommendCount}}</td>
+                <td colspan="3">{{.Post.ViewCount}} / {{.Post.RecommendCount}}</td>
             </tr>
             <tr>
                 <td colspan="4">
@@ -204,6 +210,11 @@ const postTemplateClassic = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//
         {{end}}
 
         <br>
+        <form action="/post/recommend/{{.Post.ID}}" method="POST" style="display:inline;">
+            <input type="submit" value="[추천하기]"
+                style="background:{{.ResultColors.HeaderBgColor}};color:{{.ResultColors.PointColor}};border:1px solid {{.ResultColors.BorderColor}};cursor:pointer;padding:5px 20px;">
+        </form>
+        &nbsp;
         <input type="button" value="목록으로" onclick="location.href='/'"
             style="background:{{.ResultColors.HeaderBgColor}};color:{{.ResultColors.TextColor}};border:1px solid {{.ResultColors.BorderColor}};cursor:pointer;padding:5px 20px;">
         <br><br>
@@ -222,6 +233,7 @@ const postTemplateClassic = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//
                         <tr>
                             <td>
                                 <font color="#00BFFF"><b>{{.AuthorNickname}}</b></font>
+                                <font color="#666666" size="2">{{.CreatedAt | formatDate}}</font>
                             </td>
                             <td align="right">
                                 <!-- 댓글 수정/삭제 버튼 (작성자 본인인 경우) -->

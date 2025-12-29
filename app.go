@@ -688,7 +688,7 @@ func (a *App) loadWebConfigFromDB() {
 }
 
 // SaveBBSConfig BBS 설정 저장
-func (a *App) SaveBBSConfig(title, footer, theme, font string, postsPerPage int) error {
+func (a *App) SaveBBSConfig(title, footer, theme, font string, postsPerPage int, timezone string) error {
 	if postsPerPage <= 0 {
 		postsPerPage = 20
 	}
@@ -699,6 +699,7 @@ func (a *App) SaveBBSConfig(title, footer, theme, font string, postsPerPage int)
 		Theme:        theme,
 		Font:         font,
 		PostsPerPage: postsPerPage,
+		Timezone:     timezone,
 	}
 
 	// 웹서버에 즉시 적용

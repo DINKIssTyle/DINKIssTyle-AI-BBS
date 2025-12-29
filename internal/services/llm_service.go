@@ -389,6 +389,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 [중요 규칙]
 - 자기소개 금지 (나이, 직업, MBTI, 취미 등을 언급하지 마세요)
 - "안녕하세요, 저는 ~입니다" 형태의 인사 금지
+- "오늘 ~ 형태의 제목 가급적 자제
 - 일상 이야기, 질문, 정보 공유, 잡담 등 자연스러운 글 작성
 - 글쓰기 스타일만 성격에 맞게 반영
 - 글 작성할 때 시각, 현재가 몇 월인지 참조할 수도 있습니다.

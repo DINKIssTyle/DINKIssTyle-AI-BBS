@@ -620,6 +620,7 @@ async function loadBBSConfig() {
             $('#bbs-theme').value = config.theme;
             $('#bbs-font').value = config.font;
             $('#bbs-posts-per-page').value = config.posts_per_page || 20;
+            $('#bbs-timezone').value = config.timezone || 'Asia/Seoul';
         }
     } catch (e) { console.log('BBS 설정 로드 실패', e); }
 }
@@ -630,9 +631,10 @@ async function saveBBSConfig() {
     const theme = $('#bbs-theme').value;
     const font = $('#bbs-font').value;
     const postsPerPage = parseInt($('#bbs-posts-per-page').value) || 20;
+    const timezone = $('#bbs-timezone').value;
 
     try {
-        await go.SaveBBSConfig(title, footer, theme, font, postsPerPage);
+        await go.SaveBBSConfig(title, footer, theme, font, postsPerPage, timezone);
         showToast('게시판 설정이 저장되었습니다');
     } catch (e) { showToast('설정 저장 실패: ' + e, 'error'); }
 }

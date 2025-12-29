@@ -67,7 +67,7 @@ export function ReconnectDatabase():Promise<void>;
 
 export function ResetDatabase(arg1:string):Promise<void>;
 
-export function SaveBBSConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<void>;
+export function SaveBBSConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:string):Promise<void>;
 
 export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number):Promise<void>;
 

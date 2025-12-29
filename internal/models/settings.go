@@ -44,4 +44,5 @@ type BBSConfig struct {
 	Theme        string `json:"theme"` // blue, red, green, purple, gray
 	Font         string `json:"font"`  // sans, serif
 	PostsPerPage int    `json:"posts_per_page"`
+	Timezone     string `json:"timezone"` // UTC+9, UTC+0, etc.
 }
