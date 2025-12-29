@@ -231,8 +231,11 @@ func (m *ActivityManager) browseRandomPost() {
 		log.Printf("조회수 증가 실패: %v\n", err)
 	}
 
-	// "활동전AI" 닉네임을 가진 캐릭터 찾아서 닉네임 변경 시도
+	// 운영봇 작업: "활동전AI" 닉네임 변경
 	m.updatePendingNicknames()
+
+	// 운영봇 작업: 인격 갱신이 필요한 캐릭터 처리
+	m.updatePendingPersonas()
 }
 
 // updatePendingNicknames "활동전AI" 닉네임을 가진 캐릭터를 찾아 닉네임 변경
@@ -245,6 +248,18 @@ func (m *ActivityManager) updatePendingNicknames() {
 
 	// 닉네임 업데이트
 	m.updateNicknameIfNeeded(character)
+}
+
+// updatePendingPersonas 인격 갱신이 필요한 캐릭터를 찾아 인격 생성/갱신
+func (m *ActivityManager) updatePendingPersonas() {
+	// 인격 갱신이 필요한 캐릭터 1명 조회
+	character, err := m.characterService.GetCharacterNeedingPersonaUpdate()
+	if err != nil || character == nil {
+		return // 갱신 대상 없음
+	}
+
+	// 인격 생성/갱신
+	m.checkAndGeneratePersona(character)
 }
 
 // createRandomPost 랜덤 캐릭터로 게시물 작성

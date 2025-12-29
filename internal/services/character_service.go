@@ -383,3 +383,38 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 	}
 	return &c, nil
 }
+
+// GetCharacterNeedingPersonaUpdate 인격 갱신이 필요한 캐릭터 1명 조회
+// 조건: 활동량(글+댓글) >= 3이고, 인격이 없거나 활동량이 3의 배수에 도달한 캐릭터
+func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharacter, error) {
+	db := s.db.GetDB()
+	if db == nil {
+		return nil, errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	var c models.AICharacter
+	// 인격이 없고 활동량 >= 3인 캐릭터 또는
+	// 인격이 있고 활동량이 6 이상이며 3의 배수인 캐릭터
+	err := db.QueryRow(`
+		SELECT id, nickname, gender, age, birthdate, region, hobby, 
+		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
+		       persona_summary, assigned_model_index, is_active, post_count, comment_count
+		FROM ai_characters 
+		WHERE is_active = 1 AND (
+			(COALESCE(persona_summary, '') = '' AND (post_count + comment_count) >= 3)
+			OR
+			(COALESCE(persona_summary, '') != '' AND (post_count + comment_count) >= 6 
+			 AND (post_count + comment_count) % 3 = 0)
+		)
+		ORDER BY RANDOM()
+		LIMIT 1
+	`).Scan(
+		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
+		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
+		&c.PersonaSummary, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+	)
+	if err != nil {
+		return nil, err // 갱신 대상 없음
+	}
+	return &c, nil
+}
