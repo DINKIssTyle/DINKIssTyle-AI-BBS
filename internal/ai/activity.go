@@ -521,44 +521,64 @@ func getMBTIMatchScore(mbti, text string) float64 {
 	return score
 }
 
-// checkAndGeneratePersona 인격 생성 체크 (3회 이상 글/댓글 작성 시)
+// checkAndGeneratePersona 인격 생성/갱신 체크 (활동량 기반)
 func (m *ActivityManager) checkAndGeneratePersona(character *models.AICharacter) {
-	// 이미 인격이 있으면 스킵
-	hasPersona, err := m.characterService.HasPersonaSummary(character.ID)
-	if err != nil || hasPersona {
-		return
-	}
-
 	// 활동 통계 확인
 	postCount, commentCount, err := m.characterService.GetActivityStats(character.ID)
 	if err != nil {
 		return
 	}
 
-	// 3회 이상 글 AND 3회 이상 댓글 작성 시 인격 생성
-	if postCount >= 3 && commentCount >= 3 {
-		log.Printf("인격 생성 시작: [%s] (글 %d, 댓글 %d)\n", character.Nickname, postCount, commentCount)
+	totalActivity := postCount + commentCount
 
-		// 최근 글/댓글 조회
-		recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 5)
-		recentComments, _ := m.commentService.GetRecentCommentsByCharacter(character.ID, 5)
-
-		// 인격 생성
-		summary, err := m.llmService.GeneratePersonaSummary(character, recentPosts, recentComments)
-		if err != nil {
-			log.Printf("인격 생성 실패: %v\n", err)
-			return
-		}
-
-		// 인격 저장
-		err = m.characterService.UpdatePersonaSummary(character.ID, summary)
-		if err != nil {
-			log.Printf("인격 저장 실패: %v\n", err)
-			return
-		}
-
-		log.Printf("인격 생성 완료: [%s]\n", character.Nickname)
+	// 인격 존재 여부 확인
+	hasPersona, err := m.characterService.HasPersonaSummary(character.ID)
+	if err != nil {
+		return
 	}
+
+	// 인격 생성/갱신 조건:
+	// 1. 인격이 없고 글+댓글 합이 3개 이상이면 최초 생성
+	// 2. 인격이 있고 총 활동량이 6, 12, 24... (3의 배수+3)을 초과할 때마다 갱신
+	shouldGenerate := false
+
+	if !hasPersona && totalActivity >= 3 {
+		// 최초 생성
+		shouldGenerate = true
+		log.Printf("인격 최초 생성 시작: [%s] (글 %d, 댓글 %d)\n", character.Nickname, postCount, commentCount)
+	} else if hasPersona {
+		// 갱신 조건: 마지막 갱신 이후 활동량이 3개 이상 증가했을 때
+		// 간단히 6, 12, 24... 매 3회마다 갱신 (확률적으로)
+		// 6, 9, 12, 15... 등 3의 배수마다 갱신 기회
+		if totalActivity >= 6 && totalActivity%3 == 0 {
+			shouldGenerate = true
+			log.Printf("인격 갱신 시작: [%s] (글 %d, 댓글 %d, 총 %d)\n", character.Nickname, postCount, commentCount, totalActivity)
+		}
+	}
+
+	if !shouldGenerate {
+		return
+	}
+
+	// 최근 글/댓글 조회
+	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 5)
+	recentComments, _ := m.commentService.GetRecentCommentsByCharacter(character.ID, 5)
+
+	// 인격 생성/갱신
+	summary, err := m.llmService.GeneratePersonaSummary(character, recentPosts, recentComments)
+	if err != nil {
+		log.Printf("인격 생성 실패: %v\n", err)
+		return
+	}
+
+	// 인격 저장
+	err = m.characterService.UpdatePersonaSummary(character.ID, summary)
+	if err != nil {
+		log.Printf("인격 저장 실패: %v\n", err)
+		return
+	}
+
+	log.Printf("인격 생성/갱신 완료: [%s]\n", character.Nickname)
 }
 
 // updateNicknameIfNeeded "활동전AI" 닉네임 변경
