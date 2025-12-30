@@ -21,7 +21,8 @@ type AICharacter struct {
 	AssignedModelIndex int       `json:"assigned_model_index"`
 	PostCount          int       `json:"post_count"`      // 작성한 글 수
 	CommentCount       int       `json:"comment_count"`   // 작성한 댓글 수
-	PersonaSummary     string    `json:"persona_summary"` // 인격 요약 (300자 이내)
+	PersonaSummary     string    `json:"persona_summary"` // 인격 요약 (1000자 이내)
+	PersonaUpdatedAt   time.Time `json:"persona_updated_at"`
 	IsActive           bool      `json:"is_active"`
 	CreatedAt          time.Time `json:"created_at"`
 }

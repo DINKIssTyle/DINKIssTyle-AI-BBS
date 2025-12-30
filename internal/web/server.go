@@ -8,11 +8,13 @@ import (
 	"aibbs/internal/services"
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -105,6 +107,13 @@ func (ws *WebServer) loadTemplates() {
 			}
 			return t.In(loc).Format("2006-01-02 15:04")
 		},
+		"till": func(from, to int) []int {
+			res := make([]int, 0, to-from+1)
+			for i := from; i <= to; i++ {
+				res = append(res, i)
+			}
+			return res
+		},
 		"formatDateList": func(t time.Time) template.HTML {
 			loc, _ := time.LoadLocation(ws.bbsConfig.Timezone)
 			if loc == nil {
@@ -140,6 +149,12 @@ func (ws *WebServer) loadTemplates() {
 	tmpl = template.Must(tmpl.New("unified/login.html").Parse(loginTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/register.html").Parse(registerTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/edit.html").Parse(writeTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/profile.html").Parse(profileTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/user_comments.html").Parse(userCommentsTemplateUnified))
+
+	// Fallback for classic (can use unified content for now if classic not specifically needed)
+	tmpl = template.Must(tmpl.New("classic/profile.html").Parse(profileTemplateUnified))
+	tmpl = template.Must(tmpl.New("classic/user_comments.html").Parse(userCommentsTemplateUnified))
 	fmt.Println("[DEBUG] Templates parsed successfully")
 
 	ws.templates = tmpl
@@ -284,6 +299,8 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/login", ws.handleLogin)
 	mux.HandleFunc("/logout", ws.handleLogout)
 	mux.HandleFunc("/register", ws.handleRegister)
+	mux.HandleFunc("/profile/", ws.handleUserProfile)
+	mux.HandleFunc("/comments/user/", ws.handleUserComments)
 
 	ws.server = &http.Server{
 		Addr:    ":" + ws.port,
@@ -872,4 +889,141 @@ func (ws *WebServer) handleRecommend(w http.ResponseWriter, r *http.Request) {
 
 	// 원래 게시물로 리다이렉트
 	http.Redirect(w, r, fmt.Sprintf("/post/%d", id), http.StatusFound)
+}
+
+// handleUserProfile 사용자 프로필 및 캐릭터 정보
+func (ws *WebServer) handleUserProfile(w http.ResponseWriter, r *http.Request) {
+	rawNickname := r.URL.Path[len("/profile/"):]
+	nickname, _ := url.PathUnescape(rawNickname)
+	log.Printf("[DEBUG] handleUserProfile: raw=%s, unescaped=%s", rawNickname, nickname)
+	if nickname == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	// 캐릭터 정보 조회
+	db := ws.db.GetDB()
+	c := &models.AICharacter{}
+	var personaUpdatedAt sql.NullTime
+	err := db.QueryRow(`
+		SELECT id, nickname, gender, age, COALESCE(birthdate, ''), COALESCE(region, ''),
+		       hobby, job_category, mbti, aggression_level, formality_level, roleplay_level,
+		       COALESCE(persona_summary, ''), persona_updated_at, created_at
+		FROM ai_characters WHERE nickname = ?
+	`, nickname).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
+		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
+		&c.PersonaSummary, &personaUpdatedAt, &c.CreatedAt)
+
+	if err != nil {
+		log.Printf("[DEBUG] handleUserProfile: AI character query failed for '%s': %v", nickname, err)
+		// 캐릭터가 없으면 사용자인지 확인 (사용자 프로필은 아직 간단히 처리)
+		user, userErr := ws.userService.FindUserByNickname(nickname)
+		if userErr != nil {
+			log.Printf("[DEBUG] handleUserProfile: User query also failed for '%s': %v", nickname, userErr)
+		}
+		if user == nil {
+			http.NotFound(w, r)
+			return
+		}
+		// 사용자용 캐릭터 객체 생성 (일부 필드 비움)
+		c = &models.AICharacter{
+			ID:        user.ID,
+			Nickname:  user.Nickname,
+			CreatedAt: user.CreatedAt,
+		}
+	} else {
+		// NULL-safe 처리: NullTime에서 실제 Time으로 변환
+		if personaUpdatedAt.Valid {
+			c.PersonaUpdatedAt = personaUpdatedAt.Time
+		}
+	}
+
+	data := ws.getCommonData(r)
+	data["Character"] = c
+	data["PageTitle"] = fmt.Sprintf("%s 님의 프로필", c.Nickname)
+
+	ws.renderTemplate(w, "profile.html", data)
+}
+
+// UserCommentInfo 댓글 목록용 확장 구조체
+type UserCommentInfo struct {
+	ID        int
+	PostID    int
+	PostTitle string
+	Content   string
+	CreatedAt time.Time
+}
+
+// handleUserComments 사용자가 작성한 댓글 목록
+func (ws *WebServer) handleUserComments(w http.ResponseWriter, r *http.Request) {
+	rawNickname := r.URL.Path[len("/comments/user/"):]
+	nickname, _ := url.PathUnescape(rawNickname)
+	log.Printf("[DEBUG] handleUserComments: raw=%s, unescaped=%s", rawNickname, nickname)
+	if nickname == "" {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if n, err := strconv.Atoi(p); err == nil && n > 0 {
+			page = n
+		}
+	}
+	perPage := 20
+
+	db := ws.db.GetDB()
+
+	// 전체 댓글 수 확인
+	var totalCount int
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM comments c
+		LEFT JOIN ai_characters a ON c.author_type = 'ai' AND c.author_id = a.id
+		LEFT JOIN users u ON c.author_type = 'user' AND c.author_id = u.id
+		WHERE (c.author_type = 'ai' AND a.nickname = ?) OR (c.author_type = 'user' AND u.nickname = ?)
+	`, nickname, nickname).Scan(&totalCount)
+
+	if err != nil {
+		http.Error(w, "댓글 조회 중 오류가 발생했습니다.", http.StatusInternalServerError)
+		return
+	}
+
+	totalPages := (totalCount + perPage - 1) / perPage
+	offset := (page - 1) * perPage
+
+	// 댓글 목록 조회 (게시물 제목 포함)
+	rows, err := db.Query(`
+		SELECT c.id, c.post_id, p.title, c.content, c.created_at
+		FROM comments c
+		JOIN posts p ON c.post_id = p.id
+		LEFT JOIN ai_characters a ON c.author_type = 'ai' AND c.author_id = a.id
+		LEFT JOIN users u ON c.author_type = 'user' AND c.author_id = u.id
+		WHERE (c.author_type = 'ai' AND a.nickname = ?) OR (c.author_type = 'user' AND u.nickname = ?)
+		ORDER BY c.created_at DESC
+		LIMIT ? OFFSET ?
+	`, nickname, nickname, perPage, offset)
+
+	if err != nil {
+		http.Error(w, "댓글 로딩 실패", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var comments []UserCommentInfo
+	for rows.Next() {
+		var ci UserCommentInfo
+		if err := rows.Scan(&ci.ID, &ci.PostID, &ci.PostTitle, &ci.Content, &ci.CreatedAt); err == nil {
+			comments = append(comments, ci)
+		}
+	}
+
+	data := ws.getCommonData(r)
+	data["Nickname"] = nickname
+	data["Comments"] = comments
+	data["CurrentPage"] = page
+	data["TotalPages"] = totalPages
+	data["TotalCount"] = totalCount
+	data["PageTitle"] = fmt.Sprintf("%s 님의 작성 댓글", nickname)
+
+	ws.renderTemplate(w, "user_comments.html", data)
 }

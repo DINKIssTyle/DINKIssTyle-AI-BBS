@@ -17,6 +17,8 @@ export namespace models {
 	    post_count: number;
 	    comment_count: number;
 	    persona_summary: string;
+	    // Go type: time
+	    persona_updated_at: any;
 	    is_active: boolean;
 	    // Go type: time
 	    created_at: any;
@@ -43,6 +45,7 @@ export namespace models {
 	        this.post_count = source["post_count"];
 	        this.comment_count = source["comment_count"];
 	        this.persona_summary = source["persona_summary"];
+	        this.persona_updated_at = this.convertValues(source["persona_updated_at"], null);
 	        this.is_active = source["is_active"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }

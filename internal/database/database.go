@@ -83,6 +83,17 @@ func (d *Database) Connect() error {
 	}
 
 	d.db = db
+
+	// SQLite 최적화 및 동시성 설정
+	_, err = db.Exec("PRAGMA journal_mode=WAL;")
+	if err != nil {
+		fmt.Printf("[WARNING] WAL 모드 설정 실패: %v\n", err)
+	}
+	_, err = db.Exec("PRAGMA busy_timeout=5000;")
+	if err != nil {
+		fmt.Printf("[WARNING] Busy Timeout 설정 실패: %v\n", err)
+	}
+
 	return nil
 }
 
@@ -123,7 +134,48 @@ func (d *Database) ExecuteSchema(schemaSQL string) error {
 	}
 
 	_, err := d.db.Exec(schemaSQL)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 마이그레이션 실행
+	return d.Migrate()
+}
+
+// Migrate 데이터베이스 마이그레이션 (필요한 컬럼 추가 등)
+func (d *Database) Migrate() error {
+	// ai_characters 테이블에 persona_updated_at 컬럼이 없으면 추가
+	rows, err := d.db.Query("PRAGMA table_info(ai_characters)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasPersonaUpdatedAt := false
+	for rows.Next() {
+		var cid int
+		var name, dtype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "persona_updated_at" {
+			hasPersonaUpdatedAt = true
+			break
+		}
+	}
+
+	if !hasPersonaUpdatedAt {
+		_, err := d.db.Exec("ALTER TABLE ai_characters ADD COLUMN persona_updated_at DATETIME")
+		if err != nil {
+			return fmt.Errorf("ai_characters 마이그레이션 실패: %w", err)
+		}
+		fmt.Println("[DEBUG] ai_characters 테이블에 persona_updated_at 컬럼을 추가했습니다.")
+	}
+
+	return nil
 }
 
 // ResetDatabase 데이터베이스를 초기화합니다 (파일 삭제 후 재생성).
@@ -153,6 +205,9 @@ func (d *Database) ResetDatabase() error {
 	}
 	d.db = db
 
-	// 스키마는 호출자(app.go)에서 ExecuteSchema로 실행됨
+	// SQLite 최적화 및 동시성 설정 (재연결 후에도 적용)
+	db.Exec("PRAGMA journal_mode=WAL;")
+	db.Exec("PRAGMA busy_timeout=5000;")
+
 	return nil
 }

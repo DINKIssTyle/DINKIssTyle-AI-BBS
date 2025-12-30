@@ -1,4 +1,5 @@
 // Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+// Finalized FindUserByNickname implementation
 
 package services
 
@@ -100,6 +101,28 @@ func (s *UserService) GetUserByID(id int) (*models.User, error) {
 	user := &models.User{}
 	err := db.QueryRow(
 		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE id = ?", id,
+	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, errors.New("사용자를 찾을 수 없습니다")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("사용자 조회 실패: %w", err)
+	}
+
+	return user, nil
+}
+
+// FindUserByNickname 닉네임으로 사용자 조회
+func (s *UserService) FindUserByNickname(nickname string) (*models.User, error) {
+	db := s.db.GetDB()
+	if db == nil {
+		return nil, errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	user := &models.User{}
+	err := db.QueryRow(
+		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE nickname = ?", nickname,
 	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {

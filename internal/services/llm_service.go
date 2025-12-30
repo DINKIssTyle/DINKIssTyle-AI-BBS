@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type LLMService struct {
 	// 프롬프트 조회를 위한 콜백 함수
 	promptGetter func(key string) string
 	mbtiGetter   func(mbti string) string
+
+	queueSize int32 // 현재 대기열 크기 (원자적 연산)
 }
 
 // SetPromptGetters 프롬프트 조회 함수 설정
@@ -68,7 +71,7 @@ func NewLLMService() *LLMService {
 			Model1:          "default",
 			PostsPerHour:    5,
 			CommentsPerHour: 10,
-			MaxTokens:       2000,
+			MaxTokens:       4000,
 			Temperature:     0.8,
 		},
 		client: &http.Client{
@@ -282,11 +285,15 @@ func (s *LLMService) GenerateNickname(character *models.AICharacter) (string, er
 
 // sendRequest LLM에 요청 전송 (뮤텍스로 직렬화)
 func (s *LLMService) sendRequest(prompt string, modelName string) (string, error) {
+	// 대기열 크기 증가
+	currentQueue := atomic.AddInt32(&s.queueSize, 1)
+	defer atomic.AddInt32(&s.queueSize, -1)
+
 	// LM Studio는 동시 요청을 처리할 수 없으므로 직렬화
 	s.requestMu.Lock()
 	defer s.requestMu.Unlock()
 
-	log.Printf("[LLM] 요청 시작 (모델: %s)\n", modelName)
+	log.Printf("[LLM] 요청 시작 (모델: %s, 현재 대기열: %d)\n", modelName, currentQueue)
 
 	url := fmt.Sprintf("http://%s:%s/v1/chat/completions", s.config.Host, s.config.Port)
 
@@ -393,7 +400,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 인격 정의]
+		prompt += fmt.Sprintf(`[당신의 인격, 캐릭터 정의]
 %s
 
 `, character.PersonaSummary)
@@ -466,7 +473,7 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 
 	if len(pinnedPosts) > 0 {
 		prompt += "[게시판 중요 공지사항]\n"
-		prompt += "현재 게시판 상단에 다음 공지가 고정되어 있습니다. 댓글 작성 시 이 내용을 인지하고 필요 시 참고하세요:\n"
+		prompt += "현재 게시판 상단에 다음 공지가 게시되어 있습니다. 게시판 이용에 이 내용을 참고하고 필요하다면 언급하거나 반응하세요:\n"
 		for _, p := range pinnedPosts {
 			prompt += fmt.Sprintf("- %s\n", p.Title)
 		}
@@ -569,9 +576,9 @@ func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recen
 		return "", err
 	}
 
-	// 300자 제한
-	if len(response) > 300 {
-		response = response[:300]
+	// 1000자 제한
+	if len(response) > 1000 {
+		response = response[:1000]
 	}
 
 	return strings.TrimSpace(response), nil

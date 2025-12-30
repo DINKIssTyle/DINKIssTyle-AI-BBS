@@ -5,6 +5,7 @@ package services
 import (
 	"aibbs/internal/database"
 	"aibbs/internal/models"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -147,7 +148,7 @@ func (s *CharacterService) GetAllCharacters() ([]models.AICharacter, error) {
 		       hobby, job_category, mbti, 
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       is_active, created_at
+		       persona_updated_at, is_active, created_at
 		FROM ai_characters
 		ORDER BY id DESC
 	`)
@@ -159,12 +160,16 @@ func (s *CharacterService) GetAllCharacters() ([]models.AICharacter, error) {
 	var characters []models.AICharacter
 	for rows.Next() {
 		var c models.AICharacter
+		var personaUpdatedAt sql.NullTime
 		err := rows.Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 			&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 			&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-			&c.PersonaSummary, &c.IsActive, &c.CreatedAt)
+			&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt)
 		if err != nil {
 			continue
+		}
+		if personaUpdatedAt.Valid {
+			c.PersonaUpdatedAt = personaUpdatedAt.Time
 		}
 		characters = append(characters, c)
 	}
@@ -180,20 +185,24 @@ func (s *CharacterService) GetCharacter(id int) (*models.AICharacter, error) {
 	}
 
 	c := &models.AICharacter{}
+	var personaUpdatedAt sql.NullTime
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, COALESCE(birthdate, ''), COALESCE(region, ''),
 		       hobby, job_category, mbti,
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       is_active, created_at
+		       persona_updated_at, is_active, created_at
 		FROM ai_characters WHERE id = ?
 	`, id).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 		&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-		&c.PersonaSummary, &c.IsActive, &c.CreatedAt)
+		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt)
 
 	if err != nil {
 		return nil, fmt.Errorf("캐릭터 조회 실패: %w", err)
+	}
+	if personaUpdatedAt.Valid {
+		c.PersonaUpdatedAt = personaUpdatedAt.Time
 	}
 
 	return c, nil
@@ -207,21 +216,25 @@ func (s *CharacterService) GetRandomActiveCharacter() (*models.AICharacter, erro
 	}
 
 	c := &models.AICharacter{}
+	var personaUpdatedAt sql.NullTime
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, COALESCE(birthdate, ''), COALESCE(region, ''),
 		       hobby, job_category, mbti,
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       is_active, created_at
+		       persona_updated_at, is_active, created_at
 		FROM ai_characters WHERE is_active = 1
 		ORDER BY RANDOM() LIMIT 1
 	`).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 		&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-		&c.PersonaSummary, &c.IsActive, &c.CreatedAt)
+		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt)
 
 	if err != nil {
 		return nil, fmt.Errorf("랜덤 캐릭터 조회 실패: %w", err)
+	}
+	if personaUpdatedAt.Valid {
+		c.PersonaUpdatedAt = personaUpdatedAt.Time
 	}
 
 	return c, nil
@@ -302,7 +315,7 @@ func (s *CharacterService) GetActiveCharacters() ([]models.AICharacter, error) {
 		       hobby, job_category, mbti, 
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       is_active, created_at
+		       persona_updated_at, is_active, created_at
 		FROM ai_characters WHERE is_active = 1
 		ORDER BY id DESC
 	`)
@@ -314,12 +327,16 @@ func (s *CharacterService) GetActiveCharacters() ([]models.AICharacter, error) {
 	var characters []models.AICharacter
 	for rows.Next() {
 		var c models.AICharacter
+		var personaUpdatedAt sql.NullTime
 		err := rows.Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 			&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 			&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-			&c.PersonaSummary, &c.IsActive, &c.CreatedAt)
+			&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt)
 		if err != nil {
 			continue
+		}
+		if personaUpdatedAt.Valid {
+			c.PersonaUpdatedAt = personaUpdatedAt.Time
 		}
 		characters = append(characters, c)
 	}
@@ -394,10 +411,11 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 	}
 
 	var c models.AICharacter
+	var personaUpdatedAt sql.NullTime
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
-		       persona_summary, assigned_model_index, is_active, post_count, comment_count
+		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count
 		FROM ai_characters 
 		WHERE nickname LIKE '활동전AI%' AND is_active = 1
 		ORDER BY RANDOM()
@@ -405,10 +423,13 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 	`).Scan(
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
-		&c.PersonaSummary, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
 	)
 	if err != nil {
 		return nil, err // 변경 대상 없음
+	}
+	if personaUpdatedAt.Valid {
+		c.PersonaUpdatedAt = personaUpdatedAt.Time
 	}
 	return &c, nil
 }
@@ -422,12 +443,13 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 	}
 
 	var c models.AICharacter
+	var personaUpdatedAt sql.NullTime
 	// 인격이 없고 활동량 >= 3인 캐릭터 또는
 	// 인격이 있고 활동량이 6 이상이며 3의 배수인 캐릭터
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
-		       persona_summary, assigned_model_index, is_active, post_count, comment_count
+		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count
 		FROM ai_characters 
 		WHERE is_active = 1 AND (
 			(COALESCE(persona_summary, '') = '' AND (post_count + comment_count) >= 3)
@@ -440,10 +462,13 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 	`).Scan(
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
-		&c.PersonaSummary, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
 	)
 	if err != nil {
 		return nil, err // 갱신 대상 없음
+	}
+	if personaUpdatedAt.Valid {
+		c.PersonaUpdatedAt = personaUpdatedAt.Time
 	}
 	return &c, nil
 }

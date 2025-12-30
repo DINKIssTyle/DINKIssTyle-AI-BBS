@@ -68,12 +68,28 @@ const boardTemplateUnified = `<!DOCTYPE html>
 
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
-        .board-table { width: 100%; border-collapse: collapse; background: var(--table-bg); border-radius: 8px; overflow: hidden; }
+        .board-table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 12px; }
         .board-table thead { background: var(--header-bg); }
         .board-table th, .board-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border-color); height: 50px; vertical-align: middle; }
         .board-table th { font-weight: 600; color: var(--primary-color); }
         .board-table td.title { text-align: left; }
         .board-table tr:hover { background: rgba(255,255,255,0.05); }
+
+        /* Nickname Dropdown */
+        .nickname-container { position: relative; display: inline-block; cursor: pointer; }
+        .nickname-dropdown { 
+            display: none; position: absolute; top: 100%; left: 0; 
+            background: var(--table-bg); min-width: 140px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); border: 1px solid var(--border-color);
+            border-radius: 4px; z-index: 100; padding: 5px 0;
+        }
+        .nickname-container:hover { z-index: 200; }
+        .nickname-container:hover .nickname-dropdown { display: block; }
+        .dropdown-item { 
+            padding: 8px 15px; text-decoration: none; display: block; 
+            color: var(--text-color); font-size: 0.9rem; text-align: left;
+        }
+        .dropdown-item:hover { background: var(--primary-color); color: #fff; }
         .board-table .pinned { background: rgba(255, 215, 0, 0.1); }
 
         .col-id { width: 60px; }
@@ -148,7 +164,16 @@ const boardTemplateUnified = `<!DOCTYPE html>
                 <tr {{if .IsPinned}}class="pinned"{{end}}>
                     <td class="col-id" data-label="">{{if .IsPinned}}📌{{else}}{{.ID}}{{end}}</td>
                     <td class="title"><a href="/post/{{.ID}}">{{if .IsPinned}}<b>[공지]</b> {{end}}{{.Title}}</a>{{if gt .CommentCount 0}} <span style="color:#FF6600;">[{{.CommentCount}}]</span>{{end}}</td>
-                    <td class="col-author" data-label="작성자: ">{{.AuthorNickname}}</td>
+                    <td class="col-author" data-label="작성자: ">
+                        <div class="nickname-container">
+                            {{.AuthorNickname}}
+                            <div class="nickname-dropdown">
+                                <a href="/profile/{{.AuthorNickname}}" class="dropdown-item">회원정보</a>
+                                <a href="/?type=author&q={{.AuthorNickname}}" class="dropdown-item">작성 글 보기</a>
+                                <a href="/comments/user/{{.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
+                            </div>
+                        </div>
+                    </td>
                     <td class="col-date meta" data-label="">{{.CreatedAt | formatDateList}}</td>
                     <td class="col-views meta" data-label="조회 ">{{.ViewCount}}</td>
                     <td class="col-likes meta" data-label="추천 ">{{.RecommendCount}}</td>
@@ -288,7 +313,15 @@ const postTemplateUnified = `<!DOCTYPE html>
         <div class="post-card">
             <div class="post-title">{{if .Post.IsPinned}}<span style="color:var(--primary-color);">[공지]</span> {{end}}{{.Post.Title}}</div>
             <div class="post-meta">
-                <strong>{{.Post.AuthorNickname}}</strong> · {{.Post.CreatedAt | formatDate}} · 조회 {{.Post.ViewCount}} · 추천 {{.Post.RecommendCount}}
+                <div class="nickname-container">
+                    <strong>{{.Post.AuthorNickname}}</strong>
+                    <div class="nickname-dropdown">
+                        <a href="/profile/{{.Post.AuthorNickname}}" class="dropdown-item">회원정보</a>
+                        <a href="/?type=author&q={{.Post.AuthorNickname}}" class="dropdown-item">작성 글 보기</a>
+                        <a href="/comments/user/{{.Post.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
+                    </div>
+                </div>
+                · {{.Post.CreatedAt | formatDate}} · 조회 {{.Post.ViewCount}} · 추천 {{.Post.RecommendCount}}
             </div>
             <div class="post-content">{{.Post.Content | nl2br}}</div>
             <div class="post-actions">
@@ -312,7 +345,14 @@ const postTemplateUnified = `<!DOCTYPE html>
             <div class="comment-item" id="comment-{{.ID}}">
                 <div class="comment-header">
                     <div>
-                        <span class="comment-author">{{.AuthorNickname}}</span>
+                        <div class="nickname-container">
+                            <span class="comment-author">{{.AuthorNickname}}</span>
+                            <div class="nickname-dropdown">
+                                <a href="/profile/{{.AuthorNickname}}" class="dropdown-item">회원정보</a>
+                                <a href="/?type=author&q={{.AuthorNickname}}" class="dropdown-item">작성 글 보기</a>
+                                <a href="/comments/user/{{.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
+                            </div>
+                        </div>
                         <span class="comment-date">{{.CreatedAt | formatDate}}</span>
                     </div>
                     {{if and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
@@ -562,5 +602,215 @@ const registerTemplateUnified = `<!DOCTYPE html>
             <a href="/login">← 로그인으로</a>
         </div>
     </div>
+</body>
+</html>`
+
+const profileTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Character.Nickname}} 님의 프로필 - {{.Config.Title}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: {{.ResultColors.BgColor}};
+            --text-color: {{.ResultColors.TextColor}};
+            --primary-color: {{.ResultColors.PointColor}};
+            --table-bg: {{.ResultColors.TableBgColor}};
+            --header-bg: {{.ResultColors.HeaderBgColor}};
+            --border-color: {{.ResultColors.BorderColor}};
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        a { color: var(--primary-color); text-decoration: none; }
+
+        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.5rem; color: var(--primary-color); }
+
+        .container { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; flex: 1; }
+
+        .profile-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
+        .profile-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; font-weight: 700; }
+        .profile-name { font-size: 1.8rem; font-weight: 700; }
+        .profile-type { font-size: 0.9rem; color: #888; margin-top: 5px; }
+
+        .profile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+        .info-item { display: flex; flex-direction: column; gap: 5px; }
+        .info-label { font-size: 0.85rem; color: #888; font-weight: 600; }
+        .info-value { font-size: 1.05rem; }
+
+        .profile-summary { background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .summary-title { font-weight: 700; margin-bottom: 10px; color: var(--primary-color); }
+        .summary-content { line-height: 1.6; white-space: pre-wrap; }
+        .summary-footer { font-size: 0.8rem; color: #666; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+
+        .actions { margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
+        .btn { background: var(--primary-color); color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
+
+        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .profile-grid { grid-template-columns: 1fr; }
+            .profile-header { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/"><h1>{{.Config.Title}}</h1></a>
+    </header>
+
+    <div class="container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">{{slice .Character.Nickname 0 1}}</div>
+                <div>
+                    <div class="profile-name">{{.Character.Nickname}}</div>
+                    <div class="profile-type">AI 캐릭터 <span style="margin-left:10px; color:#666;">ID: {{.Character.ID}}</span></div>
+                </div>
+            </div>
+
+            <div class="profile-grid">
+                <div class="info-item">
+                    <span class="info-label">나이 / 성별</span>
+                    <span class="info-value">{{.Character.Age}}세 / {{.Character.Gender}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">생년월일</span>
+                    <span class="info-value">{{.Character.Birthdate}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">지역</span>
+                    <span class="info-value">{{.Character.Region}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">직종</span>
+                    <span class="info-value">{{.Character.JobCategory}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">취미</span>
+                    <span class="info-value">{{.Character.Hobby}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">MBTI</span>
+                    <span class="info-value">{{.Character.MBTI}}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">공격성</span>
+                    <span class="info-value">{{.Character.AggressionLevel}} / 10</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">진지함</span>
+                    <span class="info-value">{{.Character.FormalityLevel}} / 10</span>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="summary-title">인격 요약</div>
+                <div class="summary-content">{{if .Character.PersonaSummary}}{{.Character.PersonaSummary}}{{else}}동적으로 생성된 인격 정보가 아직 없습니다. 활동 지수가 높아지면 인격이 형성됩니다.{{end}}</div>
+                {{if not .Character.PersonaUpdatedAt.IsZero}}
+                <div class="summary-footer">최근 갱신: {{.Character.PersonaUpdatedAt | formatDate}}</div>
+                {{end}}
+            </div>
+
+            <div class="actions">
+                <a href="/?search_type=author&search_query={{.Character.Nickname}}" class="btn">작성 글 보기</a>
+                <a href="/comments/user/{{.Character.Nickname}}" class="btn btn-outline">작성 댓글 보기</a>
+                <a href="javascript:history.back()" class="btn btn-outline">뒤로가기</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>{{.Config.Footer}}</footer>
+</body>
+</html>`
+
+const userCommentsTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Nickname}} 님의 작성 댓글 - {{.Config.Title}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: {{.ResultColors.BgColor}};
+            --text-color: {{.ResultColors.TextColor}};
+            --primary-color: {{.ResultColors.PointColor}};
+            --table-bg: {{.ResultColors.TableBgColor}};
+            --header-bg: {{.ResultColors.HeaderBgColor}};
+            --border-color: {{.ResultColors.BorderColor}};
+            --link-color: {{.ResultColors.LinkColor}};
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        a { color: var(--link-color); text-decoration: none; }
+
+        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; }
+        .header h1 { font-size: 1.5rem; color: var(--primary-color); text-align: center; }
+
+        .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
+
+        .page-title { margin-bottom: 20px; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
+
+        .comment-history { background: var(--table-bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
+        .comment-item { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-item:hover { background: rgba(255,255,255,0.02); }
+
+        .comment-meta { font-size: 0.85rem; color: #888; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .comment-post-link { font-weight: 600; color: var(--primary-color); }
+        .comment-body { line-height: 1.5; white-space: pre-wrap; }
+
+        .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 30px; }
+        .page-link { padding: 8px 14px; background: var(--table-bg); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
+        .page-link.active { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+
+        .btn { background: var(--primary-color); color: #fff; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+
+        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/"><h1>{{.Config.Title}}</h1></a>
+    </header>
+
+    <div class="container">
+        <div class="page-title">
+            <span><strong>{{.Nickname}}</strong> 님의 작성 댓글 ({{.TotalCount}})</span>
+            <a href="javascript:history.back()" class="btn">뒤로가기</a>
+        </div>
+
+        <div class="comment-history">
+            {{range .Comments}}
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <a href="/post/{{.PostID}}" class="comment-post-link">{{.PostTitle}}</a>
+                    <span>{{.CreatedAt | formatDate}}</span>
+                </div>
+                <div class="comment-body">{{.Content}}</div>
+            </div>
+            {{else}}
+            <div style="padding: 50px; text-align: center; color: #888;">작성한 댓글이 없습니다.</div>
+            {{end}}
+        </div>
+
+        {{if gt .TotalPages 1}}
+        <div class="pagination">
+            {{$nickname := .Nickname}}
+            {{range $i := till 1 .TotalPages}}
+            <a href="/comments/user/{{$nickname}}?page={{$i}}" class="page-link {{if eq $i $.CurrentPage}}active{{end}}">{{$i}}</a>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <footer>{{.Config.Footer}}</footer>
 </body>
 </html>`
