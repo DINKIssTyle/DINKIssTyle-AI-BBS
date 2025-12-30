@@ -138,12 +138,12 @@ export function Login(arg1, arg2) {
   return window['go']['main']['App']['Login'](arg1, arg2);
 }
 
-export function Logout() {
-  return window['go']['main']['App']['Logout']();
-}
-
 export function OpenCharacterManagerWindow() {
   return window['go']['main']['App']['OpenCharacterManagerWindow']();
+}
+
+export function OpenLogFile() {
+  return window['go']['main']['App']['OpenLogFile']();
 }
 
 export function RecommendPost(arg1) {
@@ -190,6 +190,10 @@ export function SavePrompt(arg1, arg2) {
   return window['go']['main']['App']['SavePrompt'](arg1, arg2);
 }
 
+export function SelectFile(arg1, arg2) {
+  return window['go']['main']['App']['SelectFile'](arg1, arg2);
+}
+
 export function SetUserAdmin(arg1, arg2) {
   return window['go']['main']['App']['SetUserAdmin'](arg1, arg2);
 }
@@ -198,8 +202,8 @@ export function StartAIActivity() {
   return window['go']['main']['App']['StartAIActivity']();
 }
 
-export function StartWebServer(arg1, arg2) {
-  return window['go']['main']['App']['StartWebServer'](arg1, arg2);
+export function StartWebServer(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['StartWebServer'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function StopAIActivity() {

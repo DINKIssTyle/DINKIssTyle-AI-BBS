@@ -36,12 +36,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initMainMode() {
+    const logContainer = $('#log-viewer-container');
+    if (logContainer) logContainer.style.display = 'block';
+
     initEventListeners();
     await checkLoginStatus();
     await checkDBStatus();
     loadWebConfig();
     loadLLMConfig();
     loadBBSConfig();
+
+    // 로그 이벤트 수신
+    window.runtime?.EventsOn('log-event', (message) => {
+        const viewer = $('#log-viewer');
+        if (!viewer) return;
+
+        const logItem = document.createElement('div');
+        logItem.className = 'log-item';
+        logItem.textContent = message.trim();
+        viewer.appendChild(logItem);
+
+        // 30줄 유지
+        while (viewer.children.length > 30) {
+            viewer.removeChild(viewer.firstChild);
+        }
+
+        // 자동 스크롤
+        viewer.scrollTop = viewer.scrollHeight;
+    });
 
     // 새 창 열기 버튼 이벤트
     const btnOpen = $('#btn-open-char-manager');
@@ -183,6 +205,29 @@ function initEventListeners() {
     // 웹 서버 관리
     $('#btn-start-web').addEventListener('click', startWebServer);
     $('#btn-stop-web').addEventListener('click', stopWebServer);
+
+    // SSL 설정 표시 토글
+    $('#web-ssl-enabled').addEventListener('change', (e) => {
+        const group = $('#ssl-settings-group');
+        if (group) {
+            group.style.display = e.target.value === 'true' ? 'block' : 'none';
+        }
+    });
+
+    // SSL 파일 선택 (찾아보기)
+    $('#btn-browse-cert')?.addEventListener('click', async () => {
+        try {
+            const path = await go.SelectFile('SSL 인증서 선택', '인증서 파일 (*.crt, *.pem)');
+            if (path) $('#web-ssl-cert').value = path;
+        } catch (e) { console.error(e); }
+    });
+
+    $('#btn-browse-key')?.addEventListener('click', async () => {
+        try {
+            const path = await go.SelectFile('SSL 비밀키 선택', '비밀키 파일 (*.key, *.pem)');
+            if (path) $('#web-ssl-key').value = path;
+        } catch (e) { console.error(e); }
+    });
 
     // BBS 설정
     $('#btn-save-bbs').addEventListener('click', saveBBSConfig);
@@ -724,13 +769,19 @@ async function deleteCharacter(id) {
 }
 
 async function startWebServer() {
-    const port = $('#web-port').value || '8080';
-    const regOpen = $('#web-registration').value === 'true';
+    const port = $('#web-port').value;
+    const registration = $('#web-registration').value === 'true';
+    const sslEnabled = $('#web-ssl-enabled').value === 'true';
+    const sslCert = $('#web-ssl-cert').value;
+    const sslKey = $('#web-ssl-key').value;
+
     try {
-        await go.StartWebServer(port, regOpen);
-        showToast(`웹 서버가 포트 ${port}에서 시작되었습니다`);
-        updateWebStatus(true, port);
-    } catch (e) { showToast('웹 서버 시작 실패: ' + e, 'error'); }
+        await go.StartWebServer(port, registration, sslEnabled, sslCert, sslKey);
+        updateWebStatus(true, port, sslEnabled);
+        showToast('웹 서버가 시작되었습니다');
+    } catch (e) {
+        showToast('서버 시작 실패: ' + e, 'error');
+    }
 }
 
 async function stopWebServer() {
@@ -741,7 +792,7 @@ async function stopWebServer() {
     } catch (e) { showToast('웹 서버 정지 실패: ' + e, 'error'); }
 }
 
-function updateWebStatus(running, port = '8080') {
+function updateWebStatus(running, port = '8080', ssl = false) {
     const statusEl = $('#web-status-text');
     const urlLink = $('#web-link');
     const portDisplay = $('#web-port-display');
@@ -750,7 +801,8 @@ function updateWebStatus(running, port = '8080') {
     if (running) {
         if (statusEl) { statusEl.textContent = '실행 중'; statusEl.className = 'value status-on'; }
         if (urlLink) {
-            const url = `http://localhost:${port}`;
+            const protocol = ssl ? 'https' : 'http';
+            const url = `${protocol}://localhost:${port}`;
             urlLink.href = url; urlLink.textContent = url;
         }
         if (portDisplay) portDisplay.textContent = port;
@@ -769,7 +821,16 @@ async function loadWebConfig() {
         if (config) {
             $('#web-port').value = config.port;
             $('#web-registration').value = config.registrationOpen.toString();
-            updateWebStatus(config.running, config.port);
+            $('#web-ssl-enabled').value = config.sslEnabled.toString();
+            $('#web-ssl-cert').value = config.sslCert || '';
+            $('#web-ssl-key').value = config.sslKey || '';
+
+            const group = $('#ssl-settings-group');
+            if (group) {
+                group.style.display = config.sslEnabled ? 'block' : 'none';
+            }
+
+            updateWebStatus(config.running, config.port, config.sslEnabled);
         }
     } catch (e) { console.log('웹 설정 로드 실패', e); }
 }

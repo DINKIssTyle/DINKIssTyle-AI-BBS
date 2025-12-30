@@ -417,7 +417,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 	if len(pinnedPosts) > 0 {
 		prompt += "[게시판 중요 공지사항]\n"
-		prompt += "현재 게시판 상단에 다음 공지가 게시되어 있습니다. 글 작성 시 이 내용을 참고하고 필요하다면 언급하거나 반응하세요:\n"
+		prompt += "현재 게시판 상단에 다음 공지가 게시되어 있습니다. 게시판 이용에 이 내용을 참고하고 필요하다면 언급하거나 반응하세요:\n"
 		for _, p := range pinnedPosts {
 			prompt += fmt.Sprintf("- 제목: %s\n  내용 요약: %s\n", p.Title, truncateString(p.Content, 200))
 		}
@@ -442,7 +442,7 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 인격 정의]
+		prompt += fmt.Sprintf(`[당신의 인격과 캐릭터 정의]
 %s
 
 `, character.PersonaSummary)
@@ -491,7 +491,7 @@ func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *model
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 인격 정의]
+		prompt += fmt.Sprintf(`[당신의 인격과 캐릭터 정의]
 %s
 
 `, character.PersonaSummary)

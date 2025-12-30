@@ -99,18 +99,26 @@ func (ws *WebServer) loadTemplates() {
 			}
 		},
 		"formatDate": func(t time.Time) string {
-			// 설정된 타임존으로 변환
-			loc, err := time.LoadLocation(ws.bbsConfig.Timezone)
-			if err != nil {
-				// 타임존 로드 실패 시 Asia/Seoul (KST) 고정
-				loc, _ = time.LoadLocation("Asia/Seoul")
-			}
+			loc, _ := time.LoadLocation(ws.bbsConfig.Timezone)
 			if loc == nil {
-				loc = time.Local // 그래도 실패하면 시스템 로컬
+				loc = time.Local
 			}
-
-			// UTC 시간을 해당 타임존 시간으로 변환
 			return t.In(loc).Format("2006-01-02 15:04")
+		},
+		"formatDateList": func(t time.Time) template.HTML {
+			loc, _ := time.LoadLocation(ws.bbsConfig.Timezone)
+			if loc == nil {
+				loc = time.Local
+			}
+			now := time.Now().In(loc)
+			target := t.In(loc)
+
+			// 오늘인 경우 시간만 표시
+			if now.Year() == target.Year() && now.Month() == target.Month() && now.Day() == target.Day() {
+				return template.HTML(target.Format("15:04"))
+			}
+			// 오늘이 아닌 경우 날짜와 시간을 줄바꿈하여 표시
+			return template.HTML(target.Format("2006-01-02") + "<br>" + target.Format("15:04"))
 		},
 	}
 
@@ -212,6 +220,13 @@ func (ws *WebServer) SetBBSConfig(config models.BBSConfig) {
 	ws.loadTemplates()
 }
 
+// GetBBSConfig 게시판 설정 조회
+func (ws *WebServer) GetBBSConfig() models.BBSConfig {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+	return ws.bbsConfig
+}
+
 // SetRegistrationOpen 회원가입 허용 설정
 func (ws *WebServer) SetRegistrationOpen(open bool) {
 	ws.mu.Lock()
@@ -279,8 +294,20 @@ func (ws *WebServer) Start() error {
 	ws.mu.Unlock()
 
 	go func() {
-		log.Printf("웹 서버 시작: http://localhost:%s\n", ws.port)
-		if err := ws.server.ListenAndServe(); err != http.ErrServerClosed {
+		protocol := "http"
+		if ws.bbsConfig.SSLEnabled {
+			protocol = "https"
+		}
+		log.Printf("웹 서버 시작: %s://localhost:%s\n", protocol, ws.port)
+
+		var err error
+		if ws.bbsConfig.SSLEnabled && ws.bbsConfig.SSLCertPath != "" && ws.bbsConfig.SSLKeyPath != "" {
+			err = ws.server.ListenAndServeTLS(ws.bbsConfig.SSLCertPath, ws.bbsConfig.SSLKeyPath)
+		} else {
+			err = ws.server.ListenAndServe()
+		}
+
+		if err != http.ErrServerClosed {
 			log.Printf("웹 서버 오류: %v\n", err)
 		}
 	}()
@@ -420,6 +447,36 @@ func (ws *WebServer) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 조회수 증가 (쿠키 기반 중복 방지)
+	viewedPosts, err := r.Cookie("viewed_posts")
+	isViewed := false
+	cookieVal := ""
+	if err == nil {
+		cookieVal = viewedPosts.Value
+		ids := strings.Split(cookieVal, ",")
+		for _, vId := range ids {
+			if vId == strconv.Itoa(id) {
+				isViewed = true
+				break
+			}
+		}
+	}
+
+	if !isViewed {
+		ws.postService.IncrementViewCount(id)
+		newCookieVal := strconv.Itoa(id)
+		if cookieVal != "" {
+			newCookieVal = cookieVal + "," + newCookieVal
+		}
+		http.SetCookie(w, &http.Cookie{
+			Name:     "viewed_posts",
+			Value:    newCookieVal,
+			Path:     "/",
+			Expires:  time.Now().Add(24 * time.Hour),
+			HttpOnly: true,
+		})
+	}
+
 	data := ws.getCommonData(r)
 	data["Post"] = post
 	// 상세 페이지 타이틀: "글제목 - 게시판이름"
@@ -479,7 +536,7 @@ func (ws *WebServer) handleWrite(w http.ResponseWriter, r *http.Request) {
 		isPinned := r.FormValue("is_pinned") == "1"
 
 		// 관리자가 아니면 공지 설정 무시
-		if isPinned && (user == nil || !user.IsAdmin) {
+		if isPinned && !user.IsAdmin {
 			isPinned = false
 		}
 
@@ -800,7 +857,15 @@ func (ws *WebServer) handleRecommend(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 추천 처리
-	err = ws.postService.RecommendPost(id)
+	data := ws.getCommonData(r)
+	user, _ := data["User"].(*models.User)
+	if user == nil {
+		log.Printf("[ERROR] 추천 실패: 로그인이 필요합니다")
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+
+	err = ws.postService.RecommendPostByUser("user", user.ID, id)
 	if err != nil {
 		log.Printf("[ERROR] 추천 실패: %v", err)
 	}

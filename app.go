@@ -46,6 +46,22 @@ type App struct {
 	webServer *web.WebServer
 }
 
+// WailsLogWriter 로그를 Wails 이벤트로 전송하는 라이터
+type WailsLogWriter struct {
+	ctx context.Context
+}
+
+func (w *WailsLogWriter) Write(p []byte) (n int, err error) {
+	str := string(p)
+	// 터미널 출력 유지
+	os.Stdout.Write(p)
+	// 프론트엔드 이벤트 발생
+	if w.ctx != nil {
+		runtime.EventsEmit(w.ctx, "log-event", str)
+	}
+	return len(p), nil
+}
+
 // NewApp 새 앱 인스턴스 생성
 func NewApp(mode string) *App {
 	return &App{
@@ -57,6 +73,9 @@ func NewApp(mode string) *App {
 func (a *App) startup(ctx context.Context) {
 	fmt.Println("[DEBUG] Startup called")
 	a.ctx = ctx
+
+	// 로그 설정
+	log.SetOutput(&WailsLogWriter{ctx: ctx})
 
 	// 실행 파일 경로 기준으로 DB 파일 경로 설정
 	execPath, err := os.Executable()
@@ -438,9 +457,26 @@ func (a *App) Login(username, password string) (*models.User, error) {
 	return a.userService.Login(username, password)
 }
 
-// Logout 로그아웃
-func (a *App) Logout() {
-	a.userService.Logout()
+// OpenLogFile 로그 파일 열기
+func (a *App) OpenLogFile() {
+	exec.Command("explorer", "debug_log.txt").Run()
+}
+
+// SelectFile 파일 선택 다이얼로그 열기
+func (a *App) SelectFile(title string, filter string) (string, error) {
+	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: filter,
+				Pattern:     "*.*",
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return selection, nil
 }
 
 // GetCurrentUser 현재 사용자 조회
@@ -705,16 +741,23 @@ func (a *App) UpdateComment(id int, content string) error {
 // ========================================
 
 // StartWebServer 웹 서버 시작
-func (a *App) StartWebServer(port string, registrationOpen bool) error {
+func (a *App) StartWebServer(port string, registrationOpen bool, sslEnabled bool, sslCert string, sslKey string) error {
 	a.webServer.SetPort(port)
 	a.webServer.SetRegistrationOpen(registrationOpen)
+
+	// SSL 설정 반영 (BBSConfig 업데이트)
+	config := a.webServer.GetBBSConfig()
+	config.SSLEnabled = sslEnabled
+	config.SSLCertPath = sslCert
+	config.SSLKeyPath = sslKey
+	a.webServer.SetBBSConfig(config)
 
 	// 설정 저장
 	db := a.db.GetDB()
 	if db != nil {
 		_, err := db.Exec(`INSERT OR REPLACE INTO settings (key_name, value) VALUES 
-			('web_port', ?), ('web_registration', ?)`,
-			port, fmt.Sprintf("%v", registrationOpen))
+			('web_port', ?), ('web_registration', ?), ('web_ssl_enabled', ?), ('web_ssl_cert', ?), ('web_ssl_key', ?)`,
+			port, fmt.Sprintf("%v", registrationOpen), fmt.Sprintf("%v", sslEnabled), sslCert, sslKey)
 		if err != nil {
 			log.Printf("Failed to save WebServer config: %v", err)
 		}
@@ -738,10 +781,14 @@ func (a *App) IsWebServerRunning() bool {
 
 // GetWebServerConfig 웹 서버 설정 조회
 func (a *App) GetWebServerConfig() map[string]interface{} {
+	config := a.webServer.GetBBSConfig()
 	return map[string]interface{}{
 		"port":             a.webServer.GetPort(),
 		"registrationOpen": a.webServer.IsRegistrationOpen(),
 		"running":          a.webServer.IsRunning(),
+		"sslEnabled":       config.SSLEnabled,
+		"sslCert":          config.SSLCertPath,
+		"sslKey":           config.SSLKeyPath,
 	}
 }
 
@@ -822,9 +869,10 @@ func (a *App) loadWebConfigFromDB() {
 		return
 	}
 
-	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('web_port', 'web_registration')")
+	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('web_port', 'web_registration', 'web_ssl_enabled', 'web_ssl_cert', 'web_ssl_key')")
 	if err == nil {
 		defer rows.Close()
+		config := a.webServer.GetBBSConfig()
 		for rows.Next() {
 			var key, val string
 			if err := rows.Scan(&key, &val); err == nil {
@@ -834,9 +882,16 @@ func (a *App) loadWebConfigFromDB() {
 				case "web_registration":
 					isOpen := val == "true"
 					a.webServer.SetRegistrationOpen(isOpen)
+				case "web_ssl_enabled":
+					config.SSLEnabled = val == "true"
+				case "web_ssl_cert":
+					config.SSLCertPath = val
+				case "web_ssl_key":
+					config.SSLKeyPath = val
 				}
 			}
 		}
+		a.webServer.SetBBSConfig(config)
 	}
 }
 

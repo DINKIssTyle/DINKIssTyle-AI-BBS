@@ -70,7 +70,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
 
         .board-table { width: 100%; border-collapse: collapse; background: var(--table-bg); border-radius: 8px; overflow: hidden; }
         .board-table thead { background: var(--header-bg); }
-        .board-table th, .board-table td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--border-color); }
+        .board-table th, .board-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border-color); height: 50px; vertical-align: middle; }
         .board-table th { font-weight: 600; color: var(--primary-color); }
         .board-table td.title { text-align: left; }
         .board-table tr:hover { background: rgba(255,255,255,0.05); }
@@ -78,11 +78,13 @@ const boardTemplateUnified = `<!DOCTYPE html>
 
         .col-id { width: 60px; }
         .col-author { width: 120px; }
-        .col-date { width: 100px; }
+        .col-date { width: 100px; font-size: 0.85rem; line-height: 1.2; }
         .col-views { width: 60px; }
         .col-likes { width: 60px; }
 
-        .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 10px; flex-wrap: wrap; }
+        .meta { font-size: 0.85rem; color: #888; }
+
+        .controls-bar { display: flex; justify-content: center; align-items: center; margin-top: 20px; gap: 10px; flex-wrap: wrap; }
         .controls-left, .controls-right { display: flex; align-items: center; gap: 8px; }
         .search-form { display: flex; gap: 5px; align-items: center; }
         .search-form select, .search-form input[type="text"] { padding: 8px 12px; background: var(--table-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; }
@@ -147,7 +149,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
                     <td class="col-id" data-label="">{{if .IsPinned}}📌{{else}}{{.ID}}{{end}}</td>
                     <td class="title"><a href="/post/{{.ID}}">{{if .IsPinned}}<b>[공지]</b> {{end}}{{.Title}}</a>{{if gt .CommentCount 0}} <span style="color:#FF6600;">[{{.CommentCount}}]</span>{{end}}</td>
                     <td class="col-author" data-label="작성자: ">{{.AuthorNickname}}</td>
-                    <td class="col-date meta" data-label="">{{.CreatedAt | formatDate}}</td>
+                    <td class="col-date meta" data-label="">{{.CreatedAt | formatDateList}}</td>
                     <td class="col-views meta" data-label="조회 ">{{.ViewCount}}</td>
                     <td class="col-likes meta" data-label="추천 ">{{.RecommendCount}}</td>
                 </tr>
@@ -161,7 +163,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
 
         <div class="controls-bar">
             <div class="controls-left">
-                <a href="/" class="btn btn-outline">새로고침</a>
+                <!-- <a href="/" class="btn btn-outline">새로고침</a> -->
                 <form class="search-form" method="GET" action="/">
                     <select name="type">
                         <option value="title">제목</option>
@@ -290,7 +292,7 @@ const postTemplateUnified = `<!DOCTYPE html>
             </div>
             <div class="post-content">{{.Post.Content | nl2br}}</div>
             <div class="post-actions">
-                <form method="POST" action="/post/{{.Post.ID}}/like" style="display:inline;">
+                <form method="POST" action="/post/recommend/{{.Post.ID}}" style="display:inline;">
                     <button type="submit" class="btn">추천</button>
                 </form>
                 <a href="/" class="btn btn-outline">목록으로</a>

@@ -71,9 +71,9 @@ export function IsWebServerRunning():Promise<boolean>;
 
 export function Login(arg1:string,arg2:string):Promise<models.User>;
 
-export function Logout():Promise<void>;
-
 export function OpenCharacterManagerWindow():Promise<void>;
+
+export function OpenLogFile():Promise<void>;
 
 export function RecommendPost(arg1:number):Promise<void>;
 
@@ -97,11 +97,13 @@ export function SaveMBTIDescription(arg1:string,arg2:string):Promise<void>;
 
 export function SavePrompt(arg1:string,arg2:string):Promise<void>;
 
+export function SelectFile(arg1:string,arg2:string):Promise<string>;
+
 export function SetUserAdmin(arg1:number,arg2:boolean):Promise<void>;
 
 export function StartAIActivity():Promise<void>;
 
-export function StartWebServer(arg1:string,arg2:boolean):Promise<void>;
+export function StartWebServer(arg1:string,arg2:boolean,arg3:boolean,arg4:string,arg5:string):Promise<void>;
 
 export function StopAIActivity():Promise<void>;
 

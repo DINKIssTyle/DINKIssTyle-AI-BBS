@@ -103,9 +103,56 @@ body {
 }
 
 @keyframes blink {
-    50% {
-        opacity: 0.5;
+    0% {
+        opacity: 1;
     }
+
+    50% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* 실시간 로그 뷰어 */
+#log-viewer-container {
+    display: none;
+    /* 기본적으로 숨김 (메인 모드에서만 표시) */
+    background: #000;
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 15px;
+    height: 120px;
+}
+
+#log-viewer {
+    height: 100%;
+    overflow-y: auto;
+    font-family: 'D2Coding', Consolas, monospace;
+    font-size: 13px;
+    color: #00FF41;
+    /* 매트릭스 느낌의 연두색 */
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+#log-viewer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#log-viewer::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 3px;
+}
+
+#log-viewer::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.log-item {
+    margin-bottom: 2px;
 }
 
 /* 메인 컨텐츠 */

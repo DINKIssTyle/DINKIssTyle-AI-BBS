@@ -44,5 +44,8 @@ type BBSConfig struct {
 	Theme        string `json:"theme"` // blue, red, green, purple, gray
 	Font         string `json:"font"`  // sans, serif
 	PostsPerPage int    `json:"posts_per_page"`
-	Timezone     string `json:"timezone"` // UTC+9, UTC+0, etc.
+	Timezone     string `json:"timezone"`    // Asia/Seoul, UTC, etc.
+	SSLEnabled   bool   `json:"ssl_enabled"` // HTTPS 사용 여부
+	SSLCertPath  string `json:"ssl_cert_path"`
+	SSLKeyPath   string `json:"ssl_key_path"`
 }

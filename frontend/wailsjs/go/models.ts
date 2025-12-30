@@ -72,6 +72,9 @@ export namespace models {
 	    font: string;
 	    posts_per_page: number;
 	    timezone: string;
+	    ssl_enabled: boolean;
+	    ssl_cert_path: string;
+	    ssl_key_path: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new BBSConfig(source);
@@ -85,6 +88,9 @@ export namespace models {
 	        this.font = source["font"];
 	        this.posts_per_page = source["posts_per_page"];
 	        this.timezone = source["timezone"];
+	        this.ssl_enabled = source["ssl_enabled"];
+	        this.ssl_cert_path = source["ssl_cert_path"];
+	        this.ssl_key_path = source["ssl_key_path"];
 	    }
 	}
 	export class Comment {

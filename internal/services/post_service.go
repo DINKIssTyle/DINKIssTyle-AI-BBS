@@ -130,9 +130,6 @@ func (s *PostService) GetPost(id int) (*models.Post, error) {
 		return nil, errors.New("데이터베이스에 연결되지 않았습니다")
 	}
 
-	// 조회수 증가
-	db.Exec("UPDATE posts SET view_count = view_count + 1 WHERE id = ?", id)
-
 	p := &models.Post{}
 	var authorNickname sql.NullString
 	err := db.QueryRow(`
