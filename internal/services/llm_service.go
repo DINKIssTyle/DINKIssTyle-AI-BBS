@@ -348,6 +348,7 @@ func getTimeContext() (timeStr, monthStr string) {
 	hour := currentTime.Hour()
 	minute := currentTime.Minute()
 	month := currentTime.Month()
+	day := currentTime.Day()
 
 	// 오전/오후 + 시:분 형식
 	meridiem := "오전"
@@ -363,8 +364,8 @@ func getTimeContext() (timeStr, monthStr string) {
 	}
 	timeStr = fmt.Sprintf("%s %d시 %d분", meridiem, displayHour, minute)
 
-	// 월 형식
-	monthStr = fmt.Sprintf("%d월", month)
+	// 월일 형식
+	monthStr = fmt.Sprintf("%d월 %d일", month, day)
 
 	return
 }
@@ -381,7 +382,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 [현재 시간]
 - 시각: %s
-- 월: %s
+- 날짜: %s
 
 [글쓰기 스타일]
 %s
@@ -433,7 +434,7 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 사용자입니다.
+	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 커뮤니티 사용자입니다.
 글쓰기 스타일: %s
 현재 시각: %s, %s
 
@@ -482,7 +483,7 @@ func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *model
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 사용자입니다.
+	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 커뮤니티 사용자입니다.
 글쓰기 스타일: %s
 현재 시각: %s, %s
 
@@ -523,7 +524,7 @@ func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *model
 
 // GeneratePersonaSummary AI 캐릭터의 인격 요약 생성
 func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recentPosts []models.Post, recentComments []*models.Comment) (string, error) {
-	prompt := fmt.Sprintf(`다음은 BBS 사용자의 정보와 최근 활동입니다:
+	prompt := fmt.Sprintf(`다음은 커뮤니티 사용자의 정보와 최근 활동입니다:
 
 [사용자 정보]
 - 닉네임: %s

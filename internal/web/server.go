@@ -204,6 +204,9 @@ func (ws *WebServer) SetBBSConfig(config models.BBSConfig) {
 	ws.bbsConfig = config
 	ws.themeManager.SetConfig(config)
 	ws.mu.Unlock()
+
+	// 템플릿 재로드 (날짜 포맷 등 설정 반영)
+	ws.loadTemplates()
 }
 
 // SetRegistrationOpen 회원가입 허용 설정

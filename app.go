@@ -720,6 +720,9 @@ func (a *App) StartWebServer(port string, registrationOpen bool) error {
 		}
 	}
 
+	// BBS 설정 재로드 (서버 시작 시 DB 설정 적용)
+	a.loadBBSConfigFromDB()
+
 	return a.webServer.Start()
 }
 
@@ -776,13 +779,14 @@ func (a *App) loadBBSConfigFromDB() {
 
 	// 기본값 (WebServer 생성 시 이미 설정됨, DB 값으로 오버라이드)
 	config := models.BBSConfig{
-		Title:  "DINKI'ssTyle AI BBS",
-		Footer: "(C) 2025 DINKI'ssTyle",
-		Theme:  "blue",
-		Font:   "sans",
+		Title:    "DINKI'ssTyle AI BBS",
+		Footer:   "(C) 2025 DINKI'ssTyle",
+		Theme:    "blue",
+		Font:     "sans",
+		Timezone: "Asia/Seoul",
 	}
 
-	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('bbs_title', 'bbs_footer', 'bbs_theme', 'bbs_font', 'bbs_posts_per_page')")
+	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('bbs_title', 'bbs_footer', 'bbs_theme', 'bbs_font', 'bbs_posts_per_page', 'bbs_timezone')")
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -801,6 +805,8 @@ func (a *App) loadBBSConfigFromDB() {
 					if n, err := strconv.Atoi(val); err == nil {
 						config.PostsPerPage = n
 					}
+				case "bbs_timezone":
+					config.Timezone = val
 				}
 			}
 		}
@@ -856,8 +862,8 @@ func (a *App) SaveBBSConfig(title, footer, theme, font string, postsPerPage int,
 	db := a.db.GetDB()
 	if db != nil {
 		_, err := db.Exec(`INSERT OR REPLACE INTO settings (key_name, value) VALUES 
-			('bbs_title', ?), ('bbs_footer', ?), ('bbs_theme', ?), ('bbs_font', ?), ('bbs_posts_per_page', ?)`,
-			title, footer, theme, font, fmt.Sprintf("%d", postsPerPage))
+			('bbs_title', ?), ('bbs_footer', ?), ('bbs_theme', ?), ('bbs_font', ?), ('bbs_posts_per_page', ?), ('bbs_timezone', ?)`,
+			title, footer, theme, font, fmt.Sprintf("%d", postsPerPage), timezone)
 		if err != nil {
 			log.Printf("Failed to save BBS config: %v", err)
 			return err
@@ -874,6 +880,7 @@ func (a *App) GetBBSConfig() models.BBSConfig {
 		Theme:        "blue",
 		Font:         "sans",
 		PostsPerPage: 20,
+		Timezone:     "Asia/Seoul",
 	}
 
 	db := a.db.GetDB()
@@ -881,7 +888,7 @@ func (a *App) GetBBSConfig() models.BBSConfig {
 		return config
 	}
 
-	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('bbs_title', 'bbs_footer', 'bbs_theme', 'bbs_font', 'bbs_posts_per_page')")
+	rows, err := db.Query("SELECT key_name, value FROM settings WHERE key_name IN ('bbs_title', 'bbs_footer', 'bbs_theme', 'bbs_font', 'bbs_posts_per_page', 'bbs_timezone')")
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -900,6 +907,8 @@ func (a *App) GetBBSConfig() models.BBSConfig {
 					if n, err := strconv.Atoi(val); err == nil && n > 0 {
 						config.PostsPerPage = n
 					}
+				case "bbs_timezone":
+					config.Timezone = val
 				}
 			}
 		}

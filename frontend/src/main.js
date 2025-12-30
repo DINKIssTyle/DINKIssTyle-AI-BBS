@@ -201,11 +201,8 @@ function initEventListeners() {
             const userId = parseInt(checkbox.dataset.id);
             const newStatus = checkbox.checked;
 
-            if (!state.currentUser || !state.currentUser.is_admin) {
-                showToast('관리자 권한이 필요합니다.', 'error');
-                checkbox.checked = !newStatus;
-                return;
-            }
+            // 관리자 권한 체크 제거 (요청사항 반영)
+            // if (!state.currentUser || !state.currentUser.is_admin) { ... }
 
             try {
                 await go.SetUserAdmin(userId, newStatus);
@@ -397,11 +394,11 @@ function renderUsers(users) {
         return;
     }
 
-    const isAdmin = state.currentUser && state.currentUser.is_admin;
+    // const isAdmin = state.currentUser && state.currentUser.is_admin;
 
     users.forEach(user => {
         const tr = document.createElement('tr');
-        const disabledAttr = isAdmin ? '' : 'disabled';
+        // const disabledAttr = isAdmin ? '' : 'disabled';
 
         tr.innerHTML = `
             <td>${user.id}</td>
@@ -409,7 +406,7 @@ function renderUsers(users) {
             <td>${escapeHtml(user.nickname)}</td>
             <td>
                 <input type="checkbox" class="admin-check" data-id="${user.id}" 
-                    ${user.is_admin ? 'checked' : ''} ${disabledAttr} />
+                    ${user.is_admin ? 'checked' : ''} />
             </td>
             <td>${formatDate(user.created_at)}</td>
         `;
