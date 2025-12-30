@@ -143,6 +143,22 @@ const boardTemplateUnified = `<!DOCTYPE html>
             .controls-left, .controls-right { width: 100%; justify-content: space-between; }
 
         }
+
+        /* Header Log Viewer */
+        #header-log-viewer {
+            display: none;
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-top: 1px solid #333;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .log-item { margin-bottom: 2px; border-bottom: 1px solid #111; padding-bottom: 1px; }
     </style>
 </head>
 <body>
@@ -153,12 +169,16 @@ const boardTemplateUnified = `<!DOCTYPE html>
         <div class="header-right">
             {{if .User}}
             <span>{{.User.Nickname}} 님</span>
+            <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
             <a href="/write" class="btn">글쓰기</a>
             <a href="/logout" class="btn btn-outline">로그아웃</a>
             {{else}}
             <a href="/login" class="btn">로그인</a>
             {{if .RegistrationOpen}}<a href="/register" class="btn btn-outline">회원가입</a>{{end}}
             {{end}}
+        </div>
+        <div id="header-log-viewer">
+            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
         </div>
     </header>
 
@@ -241,6 +261,48 @@ const boardTemplateUnified = `<!DOCTYPE html>
     </div>
 
     <footer>{{.Config.Footer}}</footer>
+    <script>
+        // Console Toggle Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnConsole = document.getElementById('btn-console-toggle');
+            const logViewer = document.getElementById('header-log-viewer');
+            
+            if (btnConsole && logViewer) {
+                btnConsole.addEventListener('click', function() {
+                    if (logViewer.style.display === 'none' || logViewer.style.display === '') {
+                        logViewer.style.display = 'block';
+                    } else {
+                        logViewer.style.display = 'none';
+                    }
+                });
+            }
+
+            // WebSocket for Logs
+            const logItemsContainer = logViewer;
+            if (logItemsContainer) {
+                 const evtSource = new EventSource("/events/logs");
+                 
+                 evtSource.onmessage = function(event) {
+                     const msg = event.data;
+                     const item = document.createElement('div');
+                     item.className = 'log-item';
+                     item.innerText = msg;
+                     logItemsContainer.appendChild(item);
+                     while (logItemsContainer.children.length > 50) {
+                         logItemsContainer.removeChild(logItemsContainer.firstChild);
+                     }
+                     logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
+                 };
+                 evtSource.onerror = function() {
+                     // const item = document.createElement('div');
+                     // item.className = 'log-item';
+                     // item.style.color = '#888';
+                     // item.innerText = "로그 서버 연결 재시도 중...";
+                     // if (logItemsContainer.children.length < 5) logItemsContainer.appendChild(item);
+                 };
+            }
+        });
+    </script>
 </body>
 </html>`
 
@@ -306,6 +368,22 @@ const postTemplateUnified = `<!DOCTYPE html>
             .comment-form { flex-direction: column; }
             .comment-form .btn { width: 100%; }
         }
+
+        /* Header Log Viewer */
+        #header-log-viewer {
+            display: none;
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-top: 1px solid #333;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .log-item { margin-bottom: 2px; border-bottom: 1px solid #111; padding-bottom: 1px; }
     </style>
 </head>
 <body>
@@ -316,11 +394,15 @@ const postTemplateUnified = `<!DOCTYPE html>
         <div class="header-right">
             {{if .User}}
             <span>{{.User.Nickname}} 님</span>
+            <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
             <a href="/write" class="btn">글쓰기</a>
             <a href="/logout" class="btn btn-outline">로그아웃</a>
             {{else}}
             <a href="/login" class="btn">로그인</a>
             {{end}}
+        </div>
+        <div id="header-log-viewer">
+            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
         </div>
     </header>
 
@@ -407,6 +489,46 @@ const postTemplateUnified = `<!DOCTYPE html>
 
     <footer>{{.Config.Footer}}</footer>
     <script>
+    // Console Toggle Logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnConsole = document.getElementById('btn-console-toggle');
+        const logViewer = document.getElementById('header-log-viewer');
+        
+        if (btnConsole && logViewer) {
+            btnConsole.addEventListener('click', function() {
+                if (logViewer.style.display === 'none' || logViewer.style.display === '') {
+                    logViewer.style.display = 'block';
+                    // console.log("Log viewer opened");
+                } else {
+                    logViewer.style.display = 'none';
+                    // console.log("Log viewer closed");
+                }
+            });
+        }
+
+        // WebSocket for Logs (If supported by server)
+        const logItemsContainer = logViewer;
+        if (logItemsContainer) {
+             const evtSource = new EventSource("/events/logs");
+             
+             evtSource.onmessage = function(event) {
+                 const msg = event.data;
+                 const item = document.createElement('div');
+                 item.className = 'log-item';
+                 item.innerText = msg;
+                 logItemsContainer.appendChild(item);
+                 // Keep last 30 items
+                 while (logItemsContainer.children.length > 50) {
+                     logItemsContainer.removeChild(logItemsContainer.firstChild);
+                 }
+                 logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
+             };
+             evtSource.onerror = function() {
+                 // console.log("SSE Error");
+             };
+        }
+    });
+
     function editComment(id) {
         document.getElementById('comment-content-' + id).style.display = 'none';
         var actions = document.getElementById('comment-actions-' + id);

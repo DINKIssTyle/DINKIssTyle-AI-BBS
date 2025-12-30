@@ -40,6 +40,10 @@ type WebServer struct {
 	bbsConfig    models.BBSConfig // 게시판 설정
 	themeManager *ThemeManager    // 테마 및 기기 관리
 	mu           sync.RWMutex
+
+	// Log Broadcasting (SSE)
+	logClients   map[chan string]bool
+	logClientsMu sync.Mutex
 }
 
 // NewWebServer 새 웹 서버 생성
@@ -59,6 +63,7 @@ func NewWebServer(db *database.Database, userService *services.UserService, post
 			Theme:  "blue",
 			Font:   "sans",
 		},
+		logClients: make(map[chan string]bool),
 	}
 
 	// 테마 매니저 초기화
@@ -301,6 +306,7 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/register", ws.handleRegister)
 	mux.HandleFunc("/profile/", ws.handleUserProfile)
 	mux.HandleFunc("/comments/user/", ws.handleUserComments)
+	mux.HandleFunc("/events/logs", ws.handleLogStream) // Log Stream Route
 
 	ws.server = &http.Server{
 		Addr:    ":" + ws.port,
@@ -1026,4 +1032,82 @@ func (ws *WebServer) handleUserComments(w http.ResponseWriter, r *http.Request) 
 	data["PageTitle"] = fmt.Sprintf("%s 님의 작성 댓글", nickname)
 
 	ws.renderTemplate(w, "user_comments.html", data)
+}
+
+// ========================================
+// Log Broadcasting (SSE)
+// ========================================
+
+// BroadcastLog 연결된 모든 클라이언트에게 로그 브로드캐스트
+func (ws *WebServer) BroadcastLog(message string) {
+	ws.logClientsMu.Lock()
+	defer ws.logClientsMu.Unlock()
+
+	for client := range ws.logClients {
+		select {
+		case client <- message:
+		default:
+			// 채널이 꽉 찼거나 클라이언트가 느린 경우 스킵 (블로킹 방지)
+		}
+	}
+}
+
+// handleLogStream SSE를 이용한 로그 스트리밍 핸들러
+func (ws *WebServer) handleLogStream(w http.ResponseWriter, r *http.Request) {
+	// SSE 헤더 설정
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// 클라이언트 채널 생성
+	clientChan := make(chan string, 100)
+
+	// 클라이언트 등록
+	ws.logClientsMu.Lock()
+	ws.logClients[clientChan] = true
+	ws.logClientsMu.Unlock()
+
+	// 클라이언트 연결 종료 시 제거
+	defer func() {
+		ws.logClientsMu.Lock()
+		delete(ws.logClients, clientChan)
+		ws.logClientsMu.Unlock()
+		close(clientChan)
+	}()
+
+	// 연결 유지 (Flusher)
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	// 초기 메시지 전송
+	fmt.Fprintf(w, "data: Connected to log stream\n\n")
+	flusher.Flush()
+
+	// 로그 전송 루프
+	for {
+		select {
+		case msg, open := <-clientChan:
+			if !open {
+				return
+			}
+			// SSE 포맷으로 전송 (data: message\n\n)
+			// 여러 줄일 경우 각 줄마다 data: prefix를 붙이거나 JSON으로 보낼 수 있음.
+			// 여기서는 단순히 줄바꿈을 제거하고 한 줄로 전송하거나 그대로 전송.
+			// JS EventSource는 \n\n을 메시지 구분자로 사용하므로, msg 내부의 \n은 처리 필요.
+			lines := strings.Split(msg, "\n")
+			for _, line := range lines {
+				if strings.TrimSpace(line) == "" {
+					continue
+				}
+				fmt.Fprintf(w, "data: %s\n\n", line)
+			}
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
 }

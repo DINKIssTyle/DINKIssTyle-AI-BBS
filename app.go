@@ -44,11 +44,15 @@ type App struct {
 
 	// Web Server
 	webServer *web.WebServer
+
+	// Logger
+	logWriter *WailsLogWriter
 }
 
 // WailsLogWriter 로그를 Wails 이벤트로 전송하는 라이터
 type WailsLogWriter struct {
-	ctx context.Context
+	ctx       context.Context
+	webServer *web.WebServer
 }
 
 func (w *WailsLogWriter) Write(p []byte) (n int, err error) {
@@ -58,6 +62,10 @@ func (w *WailsLogWriter) Write(p []byte) (n int, err error) {
 	// 프론트엔드 이벤트 발생
 	if w.ctx != nil {
 		runtime.EventsEmit(w.ctx, "log-event", str)
+	}
+	// 웹 서버 브로드캐스트
+	if w.webServer != nil {
+		w.webServer.BroadcastLog(str)
 	}
 	return len(p), nil
 }
@@ -74,8 +82,11 @@ func (a *App) startup(ctx context.Context) {
 	fmt.Println("[DEBUG] Startup called")
 	a.ctx = ctx
 
+	a.ctx = ctx
+
 	// 로그 설정
-	log.SetOutput(&WailsLogWriter{ctx: ctx})
+	a.logWriter = &WailsLogWriter{ctx: ctx}
+	log.SetOutput(a.logWriter) // WailsLogWriter를 기본 로거로 설정
 
 	// 실행 파일 경로 기준으로 DB 파일 경로 설정
 	execPath, err := os.Executable()
@@ -144,6 +155,7 @@ func (a *App) startup(ctx context.Context) {
 	// 웹 서버 초기화
 	fmt.Println("[DEBUG] Initializing WebServer...")
 	a.webServer = web.NewWebServer(a.db, a.userService, a.postService, a.commentService)
+	a.logWriter.webServer = a.webServer // 로거에 웹 서버 연결
 	fmt.Println("[DEBUG] WebServer initialized")
 	a.loadWebConfigFromDB() // Added loading here
 
