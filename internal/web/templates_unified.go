@@ -621,10 +621,10 @@ const writeTemplateUnified = `<!DOCTYPE html>
                 <div class="form-group">
                     <textarea name="content" placeholder="내용을 입력하세요" required>{{if .Post}}{{.Post.Content}}{{end}}</textarea>
                 </div>
-                {{if .IsAdmin}}
+                {{if .User.IsAdmin}}
                 <div class="form-group">
                     <label class="form-check">
-                        <input type="checkbox" name="is_pinned" {{if .Post}}{{if .Post.IsPinned}}checked{{end}}{{end}}>
+                        <input type="checkbox" name="is_pinned" value="1" {{if .Post}}{{if .Post.IsPinned}}checked{{end}}{{end}}>
                         공지로 등록
                     </label>
                 </div>
