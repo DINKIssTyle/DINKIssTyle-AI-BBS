@@ -72,7 +72,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
         .board-table thead { background: var(--header-bg); }
         .board-table th, .board-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border-color); height: 50px; vertical-align: middle; }
         .board-table th { font-weight: 600; color: var(--primary-color); }
-        .board-table td.title { text-align: left; }
+        .board-table td.title { text-align: left; max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .board-table tr:hover { background: rgba(255,255,255,0.05); }
 
         /* Nickname Dropdown */
@@ -95,6 +95,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
         .col-id { width: 60px; }
         .col-author { width: 120px; }
         .col-date { width: 100px; font-size: 0.85rem; line-height: 1.2; }
+        .date-br:after { content: "\A"; white-space: pre; }
         .col-views { width: 60px; }
         .col-likes { width: 60px; }
 
@@ -114,19 +115,33 @@ const boardTemplateUnified = `<!DOCTYPE html>
 
         @media (max-width: 768px) {
             .header { flex-direction: column; align-items: flex-start; }
-            .header h1 { font-size: 1.2rem; }
+            /* .header h1 { font-size: 1.2rem; } */
             .container { padding: 10px; }
             .board-table thead { display: none; }
             .board-table, .board-table tbody, .board-table tr, .board-table td { display: block; width: 100%; }
-            .board-table tr { background: var(--table-bg); margin-bottom: 10px; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
-            .board-table td { padding: 4px 0; text-align: left; border: none; }
-            .board-table td.title { font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
-            .board-table td.meta { font-size: 0.8rem; color: #888; }
-            .board-table td:before { content: attr(data-label); font-weight: 600; color: var(--primary-color); margin-right: 8px; }
-            .controls-bar { flex-direction: column; align-items: stretch; }
-            .search-form { width: 100%; }
+            .board-table tr { 
+                padding: 4px 5px; 
+                border-bottom: 1px solid var(--border-color); 
+                background: none; 
+                margin-bottom: 10px;
+                margin-top: 10px;  
+                border-radius: 0; 
+                border-left: none; border-right: none; border-top: none;
+            }
+            .board-table td { padding: 0; border: none; text-align: left; height: auto !important; }
+            .col-id { display: none !important; }
+            .board-table td.title { font-weight: 600; font-size: 1.2rem; margin-bottom: 5px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: none; }
+            .board-table td.meta { display: inline-block; width: auto; font-size: 1.0rem; color: #aaa; margin-right: 8px; line-height: 2.0; vertical-align: middle; }
+            .board-table td.meta .date-br:after { content: none; }
+            .board-table td.meta .date-br { display: inline; }
+            .board-table td.meta:not(:last-child):after { content: " ·"; margin-left: 8px; color: #555; }
+            .board-table td:before { content: none !important; }
+            
+            .controls-bar { flex-direction: column; align-items: stretch; gap: 15px; }
+            .search-form { width: 100%; order: 2; }
             .search-form input[type="text"] { flex: 1; }
             .controls-left, .controls-right { width: 100%; justify-content: space-between; }
+
         }
     </style>
 </head>
@@ -164,7 +179,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
                 <tr {{if .IsPinned}}class="pinned"{{end}}>
                     <td class="col-id" data-label="">{{if .IsPinned}}📌{{else}}{{.ID}}{{end}}</td>
                     <td class="title"><a href="/post/{{.ID}}">{{if .IsPinned}}<b>[공지]</b> {{end}}{{.Title}}</a>{{if gt .CommentCount 0}} <span style="color:#FF6600;">[{{.CommentCount}}]</span>{{end}}</td>
-                    <td class="col-author" data-label="작성자: ">
+                    <td class="col-author meta" data-label="작성자: ">
                         <div class="nickname-container">
                             {{.AuthorNickname}}
                             <div class="nickname-dropdown">
@@ -266,7 +281,7 @@ const postTemplateUnified = `<!DOCTYPE html>
 
         .post-card { background: var(--table-bg); border-radius: 8px; padding: 20px; border: 1px solid var(--border-color); }
         .post-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-        .post-meta { font-size: 0.85rem; color: #888; margin-bottom: 15px; }
+        .post-meta { font-size: 1.0rem; color: #888; margin-bottom: 15px; }
         .post-content { line-height: 1.7; min-height: 200px; white-space: pre-wrap; }
         .post-actions { display: flex; justify-content: center; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); }
 

@@ -126,8 +126,8 @@ func (ws *WebServer) loadTemplates() {
 			if now.Year() == target.Year() && now.Month() == target.Month() && now.Day() == target.Day() {
 				return template.HTML(target.Format("15:04"))
 			}
-			// 오늘이 아닌 경우 날짜와 시간을 줄바꿈하여 표시
-			return template.HTML(target.Format("2006-01-02") + "<br>" + target.Format("15:04"))
+			// 오늘이 아닌 경우 날짜와 시간을 분리하여 표시 (CSS로 줄바꿈 제어 가능)
+			return template.HTML(target.Format("2006-01-02") + "<span class=\"date-br\"> </span>" + target.Format("15:04"))
 		},
 	}
 
