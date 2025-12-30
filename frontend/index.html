@@ -250,50 +250,96 @@
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                             <h2 style="margin:0; color:var(--accent-color);">AI 캐릭터 관리 데이터베이스</h2>
-                            <div class="character-controls" style="margin:0;">
-                                <label>캐릭터 수 (1~100):</label>
-                                <input type="number" id="char-count" min="1" max="100" value="10"
-                                    class="form-input-sm" />
-                                <button id="btn-generate-chars" class="btn-primary">자동 생성</button>
+                        </div>
+
+                        <!-- 캐릭터 관리자 탭 버튼 -->
+                        <div class="char-manager-tabs" style="margin-bottom: 15px;">
+                            <button class="char-tab-btn active" data-char-tab="list">AI 캐릭터 목록</button>
+                            <button class="char-tab-btn" data-char-tab="refs">생성 참조값</button>
+                        </div>
+
+                        <!-- AI 캐릭터 목록 탭 -->
+                        <div id="char-tab-list" class="char-tab-content">
+                            <div
+                                style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 10px;">
+                                <div class="character-controls" style="margin:0;">
+                                    <label>캐릭터 수 (1~100):</label>
+                                    <input type="number" id="char-count" min="1" max="100" value="10"
+                                        class="form-input-sm" />
+                                    <button id="btn-generate-chars" class="btn-primary">자동 생성</button>
+                                </div>
+                            </div>
+
+                            <div id="character-table-container" class="character-table-container"
+                                style="height: calc(100vh - 200px);">
+                                <table id="character-table" class="character-table sortable-table">
+                                    <thead>
+                                        <tr>
+                                            <th data-sort="id" onclick="handleCharacterSort('id')">ID</th>
+                                            <th data-sort="nickname" onclick="handleCharacterSort('nickname')">닉네임</th>
+                                            <th data-sort="gender" onclick="handleCharacterSort('gender')">성별</th>
+                                            <th data-sort="age" onclick="handleCharacterSort('age')">나이</th>
+                                            <th data-sort="birthdate" onclick="handleCharacterSort('birthdate')">생년월일
+                                            </th>
+                                            <th data-sort="region" onclick="handleCharacterSort('region')">지역</th>
+                                            <th data-sort="job_category" onclick="handleCharacterSort('job_category')">
+                                                직종</th>
+                                            <th data-sort="mbti" onclick="handleCharacterSort('mbti')">MBTI</th>
+                                            <th data-sort="aggression_level"
+                                                onclick="handleCharacterSort('aggression_level')">공격성</th>
+                                            <th data-sort="formality_level"
+                                                onclick="handleCharacterSort('formality_level')">진지함</th>
+                                            <th>인격 요약</th>
+                                            <th data-sort="post_count" onclick="handleCharacterSort('post_count')">글
+                                            </th>
+                                            <th data-sort="comment_count"
+                                                onclick="handleCharacterSort('comment_count')">댓글</th>
+                                            <th data-sort="assigned_model_index"
+                                                onclick="handleCharacterSort('assigned_model_index')">모델</th>
+                                            <th data-sort="is_active" onclick="handleCharacterSort('is_active')">활성</th>
+                                            <th>작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="character-tbody">
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        <div id="character-table-container" class="character-table-container"
-                            style="height: calc(100vh - 120px);">
-                            <table id="character-table" class="character-table sortable-table">
-                                <thead>
-                                    <tr>
-                                        <th data-sort="id" onclick="handleCharacterSort('id')">ID</th>
-                                        <th data-sort="nickname" onclick="handleCharacterSort('nickname')">닉네임</th>
-                                        <th data-sort="gender" onclick="handleCharacterSort('gender')">성별</th>
-                                        <th data-sort="age" onclick="handleCharacterSort('age')">나이</th>
-                                        <th data-sort="birthdate" onclick="handleCharacterSort('birthdate')">생년월일</th>
-                                        <th data-sort="region" onclick="handleCharacterSort('region')">지역</th>
-                                        <th data-sort="job_category" onclick="handleCharacterSort('job_category')">직종
-                                        </th>
-                                        <th data-sort="mbti" onclick="handleCharacterSort('mbti')">MBTI</th>
-                                        <th data-sort="aggression_level"
-                                            onclick="handleCharacterSort('aggression_level')">
-                                            공격성</th>
-                                        <th data-sort="formality_level"
-                                            onclick="handleCharacterSort('formality_level')">진지함
-                                        </th>
-                                        <th>인격 요약</th>
-                                        <th data-sort="post_count" onclick="handleCharacterSort('post_count')">글</th>
-                                        <th data-sort="comment_count" onclick="handleCharacterSort('comment_count')">댓글
-                                        </th>
-                                        <th data-sort="assigned_model_index"
-                                            onclick="handleCharacterSort('assigned_model_index')">모델</th>
-                                        <th data-sort="is_active" onclick="handleCharacterSort('is_active')">활성</th>
-                                        <th>작업</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="character-tbody">
-                                </tbody>
-                            </table>
+                        <!-- 생성 참조값 탭 -->
+                        <div id="char-tab-refs" class="char-tab-content" style="display:none;">
+                            <p class="description">AI 캐릭터 자동 생성 시 사용되는 참조값입니다. 쉼표(,)로 구분하여 입력하세요.</p>
+                            <br>
+                            <div class="form-group">
+                                <label>직종 목록</label>
+                                <p class="hint">예: 무직, 학생, 회사원, IT개발자, ...</p>
+                                <textarea id="ref-job-categories" class="form-input" rows="4"></textarea>
+                                <div class="button-group-right">
+                                    <button class="btn-warning btn-reset-ref" data-key="job_categories">초기화</button>
+                                    <button class="btn-primary btn-save-ref" data-key="job_categories">저장</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>취미 목록</label>
+                                <p class="hint">예: 독서, 영화감상, 게임, 요리, ...</p>
+                                <textarea id="ref-hobbies" class="form-input" rows="4"></textarea>
+                                <div class="button-group-right">
+                                    <button class="btn-warning btn-reset-ref" data-key="hobbies">초기화</button>
+                                    <button class="btn-primary btn-save-ref" data-key="hobbies">저장</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>지역 목록</label>
+                                <p class="hint">예: 서울, 부산, 대구, 인천, ...</p>
+                                <textarea id="ref-regions" class="form-input" rows="2"></textarea>
+                                <div class="button-group-right">
+                                    <button class="btn-warning btn-reset-ref" data-key="regions">초기화</button>
+                                    <button class="btn-primary btn-save-ref" data-key="regions">저장</button>
+                                </div>
+                            </div>
                         </div>
-
-
                     </div>
 
                     <!-- 계정 탭 -->

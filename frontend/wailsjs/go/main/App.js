@@ -58,6 +58,10 @@ export function GetBBSConfig() {
   return window['go']['main']['App']['GetBBSConfig']();
 }
 
+export function GetCharacterRefValues() {
+  return window['go']['main']['App']['GetCharacterRefValues']();
+}
+
 export function GetComments(arg1) {
   return window['go']['main']['App']['GetComments'](arg1);
 }
@@ -142,6 +146,10 @@ export function ReconnectDatabase() {
   return window['go']['main']['App']['ReconnectDatabase']();
 }
 
+export function ResetCharacterRefValue(arg1) {
+  return window['go']['main']['App']['ResetCharacterRefValue'](arg1);
+}
+
 export function ResetDatabase(arg1) {
   return window['go']['main']['App']['ResetDatabase'](arg1);
 }
@@ -156,6 +164,10 @@ export function ResetPrompt(arg1) {
 
 export function SaveBBSConfig(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['SaveBBSConfig'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function SaveCharacterRefValue(arg1, arg2) {
+  return window['go']['main']['App']['SaveCharacterRefValue'](arg1, arg2);
 }
 
 export function SaveLLMConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {

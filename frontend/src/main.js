@@ -859,5 +859,82 @@ async function resetMBTI(mbti) {
     }
 }
 
+// ================================
+// 캐릭터 관리자 탭 전환
+// ================================
+$$('.char-tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const tabId = e.target.dataset.charTab;
+
+        // 모든 탭 버튼 비활성화
+        $$('.char-tab-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        // 모든 탭 콘텐츠 숨김
+        $$('.char-tab-content').forEach(c => c.style.display = 'none');
+
+        // 선택된 탭 콘텐츠 표시
+        const content = $(`#char-tab-${tabId}`);
+        if (content) {
+            content.style.display = 'block';
+
+            // 생성 참조값 탭 선택 시 데이터 로드
+            if (tabId === 'refs') {
+                loadCharacterRefValues();
+            }
+        }
+    });
+});
+
+// ================================
+// 캐릭터 생성 참조값 관리
+// ================================
+async function loadCharacterRefValues() {
+    try {
+        const refs = await go.GetCharacterRefValues();
+        $('#ref-job-categories').value = refs.job_categories || '';
+        $('#ref-hobbies').value = refs.hobbies || '';
+        $('#ref-regions').value = refs.regions || '';
+    } catch (e) {
+        console.error('참조값 로드 실패', e);
+    }
+}
+
+// 참조값 저장 버튼
+$$('.btn-save-ref').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const textareaId = `#ref-${key.replace('_', '-')}`;
+        const value = $(textareaId).value.trim();
+
+        try {
+            await go.SaveCharacterRefValue(key, value);
+            showToast('저장되었습니다.');
+        } catch (e) {
+            showToast('저장 실패: ' + e, 'error');
+        }
+    });
+});
+
+// 참조값 초기화 버튼
+$$('.btn-reset-ref').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const key = btn.dataset.key;
+        const textareaId = `#ref-${key.replace('_', '-')}`;
+
+        if (!confirm('정말로 초기화하시겠습니까?')) {
+            return;
+        }
+
+        try {
+            const defaultValue = await go.ResetCharacterRefValue(key);
+            $(textareaId).value = defaultValue;
+            showToast('초기화되었습니다.');
+        } catch (e) {
+            showToast('초기화 실패: ' + e, 'error');
+        }
+    });
+});
+
 // 전역 함수 노출 (HTML onclick 이벤트용)
 window.handleCharacterSort = handleCharacterSort;

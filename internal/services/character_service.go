@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -19,6 +20,32 @@ type CharacterService struct {
 // NewCharacterService 새 캐릭터 서비스 생성
 func NewCharacterService(db *database.Database) *CharacterService {
 	return &CharacterService{db: db}
+}
+
+// loadRefValues DB에서 참조값을 로드하고, 없으면 기본값 사용
+func (s *CharacterService) loadRefValues(key string, defaults []string) []string {
+	sqlDB := s.db.GetDB()
+	if sqlDB == nil {
+		return defaults
+	}
+	var value string
+	err := sqlDB.QueryRow("SELECT value FROM settings WHERE key_name = ?", "ref_"+key).Scan(&value)
+	if err != nil || value == "" {
+		return defaults
+	}
+	// 쉼표로 분리
+	items := strings.Split(value, ",")
+	result := []string{}
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	if len(result) == 0 {
+		return defaults
+	}
+	return result
 }
 
 // GenerateCharacters AI 캐릭터 자동 생성
@@ -36,8 +63,10 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 	characters := make([]models.AICharacter, 0, count)
 	genders := []string{"남성", "여성"}
 
-	// 현재 최대 인덱스 찾기 (활동전AI 이름 충돌 방지용)
-	// 간단히 현재 시간 기반이나 루프에서 체크
+	// DB에서 참조값 로드 (없으면 기본값 사용)
+	jobCategories := s.loadRefValues("job_categories", models.JobCategories)
+	hobbies := s.loadRefValues("hobbies", models.Hobbies)
+	regions := s.loadRefValues("regions", models.Regions)
 
 	for i := 0; i < count; i++ {
 		// 모델 인덱스 할당 (1, 2, 3 순환)
@@ -60,8 +89,8 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 			Nickname:           nickname,
 			Gender:             genders[rng.Intn(2)],
 			Age:                rng.Intn(50) + 15, // 15~64세
-			Hobby:              models.Hobbies[rng.Intn(len(models.Hobbies))],
-			JobCategory:        models.JobCategories[rng.Intn(len(models.JobCategories))],
+			Hobby:              hobbies[rng.Intn(len(hobbies))],
+			JobCategory:        jobCategories[rng.Intn(len(jobCategories))],
 			MBTI:               models.MBTITypes[rng.Intn(len(models.MBTITypes))],
 			AggressionLevel:    rng.Intn(11), // 0~10
 			FormalityLevel:     rng.Intn(11),
@@ -82,7 +111,7 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 		character.Birthdate = fmt.Sprintf("%04d-%02d-%02d", birthYear, birthMonth, birthDay)
 
 		// 지역 무작위 선택
-		character.Region = models.KoreaRegions[rng.Intn(len(models.KoreaRegions))]
+		character.Region = regions[rng.Intn(len(regions))]
 
 		result, err := db.Exec(`
 			INSERT INTO ai_characters (nickname, gender, age, birthdate, region, hobby, job_category, mbti, 

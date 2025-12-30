@@ -31,6 +31,8 @@ export function GetAppMode():Promise<string>;
 
 export function GetBBSConfig():Promise<models.BBSConfig>;
 
+export function GetCharacterRefValues():Promise<Record<string, string>>;
+
 export function GetComments(arg1:number):Promise<Array<models.Comment>>;
 
 export function GetCurrentUser():Promise<models.User>;
@@ -73,6 +75,8 @@ export function RecommendPost(arg1:number):Promise<void>;
 
 export function ReconnectDatabase():Promise<void>;
 
+export function ResetCharacterRefValue(arg1:string):Promise<string>;
+
 export function ResetDatabase(arg1:string):Promise<void>;
 
 export function ResetMBTIDescription(arg1:string):Promise<void>;
@@ -80,6 +84,8 @@ export function ResetMBTIDescription(arg1:string):Promise<void>;
 export function ResetPrompt(arg1:string):Promise<void>;
 
 export function SaveBBSConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:string):Promise<void>;
+
+export function SaveCharacterRefValue(arg1:string,arg2:string):Promise<void>;
 
 export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number):Promise<void>;
 

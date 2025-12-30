@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -920,4 +921,87 @@ func (a *App) OpenCharacterManagerWindow() error {
 
 	cmd := exec.Command(execPath, "-mode", "char_manager")
 	return cmd.Start()
+}
+
+// GetCharacterRefValues 캐릭터 생성 참조값 조회
+func (a *App) GetCharacterRefValues() map[string]string {
+	result := make(map[string]string)
+	db := a.db.GetDB()
+	if db == nil {
+		// 기본값 반환
+		result["job_categories"] = strings.Join(models.JobCategories, ", ")
+		result["hobbies"] = strings.Join(models.Hobbies, ", ")
+		result["regions"] = strings.Join(models.Regions, ", ")
+		return result
+	}
+
+	// DB에서 값 조회, 없으면 기본값
+	keys := []string{"job_categories", "hobbies", "regions"}
+	defaults := map[string]string{
+		"job_categories": strings.Join(models.JobCategories, ", "),
+		"hobbies":        strings.Join(models.Hobbies, ", "),
+		"regions":        strings.Join(models.Regions, ", "),
+	}
+
+	for _, key := range keys {
+		var value string
+		err := db.QueryRow("SELECT value FROM settings WHERE key_name = ?", "ref_"+key).Scan(&value)
+		if err != nil || value == "" {
+			result[key] = defaults[key]
+		} else {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+// SaveCharacterRefValue 캐릭터 생성 참조값 저장 (중복 자동 제거)
+func (a *App) SaveCharacterRefValue(key, value string) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	// 줄바꿈을 쉼표로 치환하고, 쉼표로 분리 후 중복 제거
+	value = strings.ReplaceAll(value, "\r\n", ",")
+	value = strings.ReplaceAll(value, "\n", ",")
+	items := strings.Split(value, ",")
+	seen := make(map[string]bool)
+	uniqueItems := []string{}
+	for _, item := range items {
+		trimmed := strings.TrimSpace(item)
+		if trimmed != "" && !seen[trimmed] {
+			seen[trimmed] = true
+			uniqueItems = append(uniqueItems, trimmed)
+		}
+	}
+	cleanedValue := strings.Join(uniqueItems, ", ")
+
+	_, err := db.Exec(`
+		INSERT OR REPLACE INTO settings (key_name, value) VALUES (?, ?)
+	`, "ref_"+key, cleanedValue)
+	return err
+}
+
+// ResetCharacterRefValue 캐릭터 생성 참조값 기본값으로 초기화
+func (a *App) ResetCharacterRefValue(key string) (string, error) {
+	db := a.db.GetDB()
+	if db == nil {
+		return "", fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	defaults := map[string]string{
+		"job_categories": strings.Join(models.JobCategories, ", "),
+		"hobbies":        strings.Join(models.Hobbies, ", "),
+		"regions":        strings.Join(models.Regions, ", "),
+	}
+
+	defaultValue, ok := defaults[key]
+	if !ok {
+		return "", fmt.Errorf("알 수 없는 키: %s", key)
+	}
+
+	// DB에서 삭제 (다음 조회 시 기본값 반환)
+	_, _ = db.Exec("DELETE FROM settings WHERE key_name = ?", "ref_"+key)
+	return defaultValue, nil
 }

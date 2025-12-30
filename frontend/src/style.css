@@ -834,3 +834,36 @@ hr {
     margin: 2px;
     vertical-align: middle;
 }
+
+/* 캐릭터 관리자 탭 스타일 */
+.char-manager-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.char-tab-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.char-tab-btn:hover {
+    background: var(--hover-bg);
+}
+
+.char-tab-btn.active {
+    background: var(--accent-color);
+    color: var(--bg-color);
+    border-color: var(--accent-color);
+}
+
+.char-tab-content {
+    padding-top: 15px;
+}
