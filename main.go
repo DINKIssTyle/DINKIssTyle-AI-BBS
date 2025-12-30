@@ -36,9 +36,9 @@ func main() {
 
 	if *modePtr == "char_manager" {
 		title = "AI 캐릭터 관리자 - DINKIssTyle AI BBS"
-		width = 1360
+		width = 1400
 		height = 900
-		minWidth = 1340
+		minWidth = 1400
 		minHeight = 800
 	}
 

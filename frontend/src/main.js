@@ -576,7 +576,12 @@ function sortAndRenderCharacters() {
         return 0;
     });
 
-    renderCharacters(chars, stats);
+    // 검색 필터 적용
+    const searchInput = $('#char-search');
+    const searchTerm = searchInput ? searchInput.value : '';
+    const filteredChars = filterCharactersBySearch(chars, searchTerm);
+
+    renderCharacters(filteredChars, stats);
     updateSortIndicators();
 }
 
@@ -598,6 +603,42 @@ function updateSortIndicators() {
         if (sortField === state.characterSort.field) {
             th.classList.add(state.characterSort.asc ? 'sort-asc' : 'sort-desc');
         }
+    });
+}
+
+// 캐릭터 검색 필터링
+function filterCharactersBySearch(chars, searchTerm) {
+    if (!searchTerm || searchTerm.trim() === '') {
+        return chars;
+    }
+    const term = searchTerm.toLowerCase().trim();
+    return chars.filter(c => {
+        const searchFields = [
+            c.id?.toString() || '',
+            c.nickname || '',
+            c.gender || '',
+            c.age?.toString() || '',
+            c.birthdate || '',
+            c.region || '',
+            c.job_category || '',
+            c.hobby || '',
+            c.mbti || '',
+            c.aggression_level?.toString() || '',
+            c.formality_level?.toString() || '',
+            c.persona_summary || '',
+            c.post_count?.toString() || '',
+            c.comment_count?.toString() || '',
+            c.assigned_model_index?.toString() || ''
+        ];
+        return searchFields.some(field => field.toLowerCase().includes(term));
+    });
+}
+
+// 검색창 이벤트 리스너
+const charSearchInput = $('#char-search');
+if (charSearchInput) {
+    charSearchInput.addEventListener('input', () => {
+        sortAndRenderCharacters();
     });
 }
 
@@ -624,6 +665,7 @@ function renderCharacters(chars, stats = {}) {
             <td><input type="text" value="${c.birthdate || ''}" data-field="birthdate" placeholder="YYYY-MM-DD" style="width:90px;"/></td>
             <td><input type="text" value="${escapeHtml(c.region) || ''}" data-field="region" style="width:60px;"/></td>
             <td><input type="text" value="${escapeHtml(c.job_category)}" data-field="job_category" style="width:100px;"/></td>
+            <td><input type="text" value="${escapeHtml(c.hobby) || ''}" data-field="hobby" style="width:80px;"/></td>
             <td><input type="text" value="${c.mbti}" maxlength="4" data-field="mbti" style="width:50px;"/></td>
             <td><input type="number" value="${c.aggression_level}" min="1" max="10" data-field="aggression_level" style="width:40px;"/></td>
             <td><input type="number" value="${c.formality_level}" min="1" max="10" data-field="formality_level" style="width:40px;"/></td>
@@ -657,6 +699,7 @@ async function updateCharacter(id, tr) {
         birthdate: tr.querySelector('[data-field="birthdate"]').value,
         region: tr.querySelector('[data-field="region"]').value,
         job_category: tr.querySelector('[data-field="job_category"]').value,
+        hobby: tr.querySelector('[data-field="hobby"]').value,
         mbti: tr.querySelector('[data-field="mbti"]').value,
 
         // Levels

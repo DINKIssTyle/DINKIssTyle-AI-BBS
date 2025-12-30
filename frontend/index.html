@@ -261,7 +261,11 @@
                         <!-- AI 캐릭터 목록 탭 -->
                         <div id="char-tab-list" class="char-tab-content">
                             <div
-                                style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: 10px;">
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                                <div class="search-box">
+                                    <input type="text" id="char-search" class="form-input" placeholder="검색..."
+                                        style="width:250px;" />
+                                </div>
                                 <div class="character-controls" style="margin:0;">
                                     <label>캐릭터 수 (1~100):</label>
                                     <input type="number" id="char-count" min="1" max="100" value="10"
@@ -284,6 +288,7 @@
                                             <th data-sort="region" onclick="handleCharacterSort('region')">지역</th>
                                             <th data-sort="job_category" onclick="handleCharacterSort('job_category')">
                                                 직종</th>
+                                            <th data-sort="hobby" onclick="handleCharacterSort('hobby')">취미</th>
                                             <th data-sort="mbti" onclick="handleCharacterSort('mbti')">MBTI</th>
                                             <th data-sort="aggression_level"
                                                 onclick="handleCharacterSort('aggression_level')">공격성</th>
@@ -313,7 +318,7 @@
                             <div class="form-group">
                                 <label>직종 목록</label>
                                 <p class="hint">예: 무직, 학생, 회사원, IT개발자, ...</p>
-                                <textarea id="ref-job-categories" class="form-input" rows="4"></textarea>
+                                <textarea id="ref-job-categories" class="form-input" rows="8"></textarea>
                                 <div class="button-group-right">
                                     <button class="btn-warning btn-reset-ref" data-key="job_categories">초기화</button>
                                     <button class="btn-primary btn-save-ref" data-key="job_categories">저장</button>
@@ -323,7 +328,7 @@
                             <div class="form-group">
                                 <label>취미 목록</label>
                                 <p class="hint">예: 독서, 영화감상, 게임, 요리, ...</p>
-                                <textarea id="ref-hobbies" class="form-input" rows="4"></textarea>
+                                <textarea id="ref-hobbies" class="form-input" rows="8"></textarea>
                                 <div class="button-group-right">
                                     <button class="btn-warning btn-reset-ref" data-key="hobbies">초기화</button>
                                     <button class="btn-primary btn-save-ref" data-key="hobbies">저장</button>
@@ -333,7 +338,7 @@
                             <div class="form-group">
                                 <label>지역 목록</label>
                                 <p class="hint">예: 서울, 부산, 대구, 인천, ...</p>
-                                <textarea id="ref-regions" class="form-input" rows="2"></textarea>
+                                <textarea id="ref-regions" class="form-input" rows="4"></textarea>
                                 <div class="button-group-right">
                                     <button class="btn-warning btn-reset-ref" data-key="regions">초기화</button>
                                     <button class="btn-primary btn-save-ref" data-key="regions">저장</button>
