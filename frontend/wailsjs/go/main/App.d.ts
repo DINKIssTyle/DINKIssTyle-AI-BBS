@@ -3,6 +3,10 @@
 import {models} from '../models';
 import {main} from '../models';
 
+export function BatchDeleteCharacters(arg1:Array<number>):Promise<void>;
+
+export function BatchSetCharacterActive(arg1:Array<number>,arg2:boolean):Promise<void>;
+
 export function ChangeNickname(arg1:string):Promise<void>;
 
 export function ChangePassword(arg1:string,arg2:string):Promise<void>;

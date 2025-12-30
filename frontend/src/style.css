@@ -369,7 +369,18 @@ body {
     padding: 10px;
     font-family: inherit;
     font-size: 14px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+.form-searcharea {
+    width: 100%;
+    background: var(--header-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    /* margin-bottom: 10px; */
 }
 
 .form-textarea {
@@ -441,6 +452,8 @@ body {
 
 .tab-content h3 {
     color: var(--accent-color);
+    font-size: 20px;
+    font-weight: bold;
     margin-bottom: 20px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
@@ -457,8 +470,11 @@ body {
 
 .form-group label {
     display: block;
+    margin-top: 20px;
     margin-bottom: 5px;
-    color: #AAA;
+    font-size: 15px;
+    font-weight: bold;
+    /* color: #AAA; */
 }
 
 .form-input-sm {
@@ -866,4 +882,36 @@ hr {
 
 .char-tab-content {
     padding-top: 15px;
+}
+
+/* 일괄 작업 버튼 정렬 */
+.batch-actions button,
+.search-box input {
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.batch-actions button {
+    padding: 0 12px;
+    font-size: 13px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    border-color: #545b62;
 }

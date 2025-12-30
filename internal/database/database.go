@@ -126,7 +126,7 @@ func (d *Database) ExecuteSchema(schemaSQL string) error {
 	return err
 }
 
-// ResetDatabase 데이터베이스를 초기화합니다.
+// ResetDatabase 데이터베이스를 초기화합니다 (파일 삭제 후 재생성).
 func (d *Database) ResetDatabase() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -135,13 +135,24 @@ func (d *Database) ResetDatabase() error {
 		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
 	}
 
-	tables := []string{"recommendations", "comments", "posts", "ai_characters", "users", "settings"}
-	for _, table := range tables {
-		_, err := d.db.Exec("DROP TABLE IF EXISTS " + table)
-		if err != nil {
-			return fmt.Errorf("테이블 %s 삭제 실패: %w", table, err)
-		}
+	dbPath := d.dbPath
+
+	// 1. 기존 연결 닫기
+	d.db.Close()
+	d.db = nil
+
+	// 2. DB 파일 삭제
+	if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("DB 파일 삭제 실패: %w", err)
 	}
 
+	// 3. 새 DB 연결
+	db, err := sql.Open("sqlite", dbPath+"?_foreign_keys=on")
+	if err != nil {
+		return fmt.Errorf("DB 재연결 실패: %w", err)
+	}
+	d.db = db
+
+	// 스키마는 호출자(app.go)에서 ExecuteSchema로 실행됨
 	return nil
 }

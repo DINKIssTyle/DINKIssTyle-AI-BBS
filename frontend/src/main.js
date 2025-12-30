@@ -646,13 +646,15 @@ function renderCharacters(chars, stats = {}) {
     const tbody = $('#character-tbody');
     tbody.innerHTML = '';
     if (!chars || chars.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:20px;">캐릭터가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:20px;">캐릭터가 없습니다.</td></tr>';
         return;
     }
     chars.forEach(c => {
         const charStats = stats[c.id] || { post_count: 0, comment_count: 0 };
         const tr = document.createElement('tr');
+        tr.dataset.charId = c.id;
         tr.innerHTML = `
+            <td><input type="checkbox" class="char-select-checkbox" data-char-id="${c.id}"/></td>
             <td>${c.id}</td>
             <td><input type="text" value="${escapeHtml(c.nickname)}" data-field="nickname" style="width:80px;"/></td>
             <td>
@@ -978,6 +980,96 @@ $$('.btn-reset-ref').forEach(btn => {
         }
     });
 });
+
+// ================================
+// 캐릭터 일괄 선택 및 작업
+// ================================
+
+// 헤더 체크박스로 현재 보이는 행 전체 선택/해제
+const selectAllCheckbox = $('#char-select-all-checkbox');
+if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+        const checkboxes = $$('.char-select-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
+    });
+}
+
+// 전체 선택 버튼
+const btnSelectAll = $('#btn-select-all');
+if (btnSelectAll) {
+    btnSelectAll.addEventListener('click', () => {
+        const checkboxes = $$('.char-select-checkbox');
+        const allChecked = [...checkboxes].every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        if (selectAllCheckbox) selectAllCheckbox.checked = !allChecked;
+    });
+}
+
+// 선택된 캐릭터 ID 목록 가져오기
+function getSelectedCharacterIds() {
+    const checked = $$('.char-select-checkbox:checked');
+    return [...checked].map(cb => parseInt(cb.dataset.charId));
+}
+
+// 일괄 활성화
+const btnBatchActivate = $('#btn-batch-activate');
+if (btnBatchActivate) {
+    btnBatchActivate.addEventListener('click', async () => {
+        const ids = getSelectedCharacterIds();
+        if (ids.length === 0) {
+            showToast('선택된 캐릭터가 없습니다.', 'error');
+            return;
+        }
+        try {
+            await go.BatchSetCharacterActive(ids, true);
+            showToast(`${ids.length}명 활성화 완료`);
+            loadCharacters();
+        } catch (e) {
+            showToast('활성화 실패: ' + e, 'error');
+        }
+    });
+}
+
+// 일괄 비활성화
+const btnBatchDeactivate = $('#btn-batch-deactivate');
+if (btnBatchDeactivate) {
+    btnBatchDeactivate.addEventListener('click', async () => {
+        const ids = getSelectedCharacterIds();
+        if (ids.length === 0) {
+            showToast('선택된 캐릭터가 없습니다.', 'error');
+            return;
+        }
+        try {
+            await go.BatchSetCharacterActive(ids, false);
+            showToast(`${ids.length}명 비활성화 완료`);
+            loadCharacters();
+        } catch (e) {
+            showToast('비활성화 실패: ' + e, 'error');
+        }
+    });
+}
+
+// 일괄 삭제
+const btnBatchDelete = $('#btn-batch-delete');
+if (btnBatchDelete) {
+    btnBatchDelete.addEventListener('click', async () => {
+        const ids = getSelectedCharacterIds();
+        if (ids.length === 0) {
+            showToast('선택된 캐릭터가 없습니다.', 'error');
+            return;
+        }
+        if (!confirm(`${ids.length}명의 캐릭터를 삭제하시겠습니까?`)) {
+            return;
+        }
+        try {
+            await go.BatchDeleteCharacters(ids);
+            showToast(`${ids.length}명 삭제 완료`);
+            loadCharacters();
+        } catch (e) {
+            showToast('삭제 실패: ' + e, 'error');
+        }
+    });
+}
 
 // 전역 함수 노출 (HTML onclick 이벤트용)
 window.handleCharacterSort = handleCharacterSort;

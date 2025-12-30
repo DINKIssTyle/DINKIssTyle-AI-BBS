@@ -242,6 +242,7 @@ func (s *LLMService) GenerateNickname(character *models.AICharacter) (string, er
 	prompt := strings.ReplaceAll(userPrompt, "{gender}", character.Gender)
 	prompt = strings.ReplaceAll(prompt, "{age}", fmt.Sprintf("%d", character.Age))
 	prompt = strings.ReplaceAll(prompt, "{job}", character.JobCategory)
+	prompt = strings.ReplaceAll(prompt, "{hobby}", character.Hobby)
 	prompt = strings.ReplaceAll(prompt, "{mbti}", character.MBTI)
 	prompt = strings.ReplaceAll(prompt, "{mbti_desc}", mbtiDesc)
 
@@ -373,7 +374,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 BBS 게시판 사용자입니다.
+	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 인터넷 커뮤니티 게시판 사용자입니다.
 당신의 특성(참고용):
 - 성별: %s, 나이: %d세, 거주지: %s, 취미: %s, 직종: %s
 - MBTI: %s (공격성 %d/10, 진지함 %d/10)

@@ -1005,3 +1005,58 @@ func (a *App) ResetCharacterRefValue(key string) (string, error) {
 	_, _ = db.Exec("DELETE FROM settings WHERE key_name = ?", "ref_"+key)
 	return defaultValue, nil
 }
+
+// BatchSetCharacterActive 여러 캐릭터 활성화/비활성화
+func (a *App) BatchSetCharacterActive(ids []int, active bool) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	if len(ids) == 0 {
+		return fmt.Errorf("선택된 캐릭터가 없습니다")
+	}
+
+	// 쿼리 생성
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids)+1)
+	activeVal := 0
+	if active {
+		activeVal = 1
+	}
+	args[0] = activeVal
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i+1] = id
+	}
+
+	query := fmt.Sprintf("UPDATE ai_characters SET is_active = ? WHERE id IN (%s)",
+		strings.Join(placeholders, ","))
+	_, err := db.Exec(query, args...)
+	return err
+}
+
+// BatchDeleteCharacters 여러 캐릭터 삭제
+func (a *App) BatchDeleteCharacters(ids []int) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	if len(ids) == 0 {
+		return fmt.Errorf("선택된 캐릭터가 없습니다")
+	}
+
+	// 쿼리 생성
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf("DELETE FROM ai_characters WHERE id IN (%s)",
+		strings.Join(placeholders, ","))
+	_, err := db.Exec(query, args...)
+	return err
+}

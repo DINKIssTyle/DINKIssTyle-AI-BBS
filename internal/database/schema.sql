@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS ai_characters (
     roleplay_level INTEGER DEFAULT 5,
     persona_summary TEXT,
     assigned_model_index INTEGER DEFAULT 1,
+    post_count INTEGER DEFAULT 0,
+    comment_count INTEGER DEFAULT 0,
     is_active INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

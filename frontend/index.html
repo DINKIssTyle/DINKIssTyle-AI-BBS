@@ -262,9 +262,17 @@
                         <div id="char-tab-list" class="char-tab-content">
                             <div
                                 style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                                <div class="search-box">
-                                    <input type="text" id="char-search" class="form-input" placeholder="검색..."
-                                        style="width:250px;" />
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <div class="search-box">
+                                        <input type="text" id="char-search" class="form-searcharea" placeholder="검색..."
+                                            style="width:200px;" />
+                                    </div>
+                                    <div class="batch-actions" style="display:flex; gap:5px;">
+                                        <button id="btn-select-all" class="btn-secondary">전체 선택</button>
+                                        <button id="btn-batch-activate" class="btn-primary">활성화</button>
+                                        <button id="btn-batch-deactivate" class="btn-warning">비활성화</button>
+                                        <button id="btn-batch-delete" class="btn-danger">삭제</button>
+                                    </div>
                                 </div>
                                 <div class="character-controls" style="margin:0;">
                                     <label>캐릭터 수 (1~100):</label>
@@ -279,6 +287,8 @@
                                 <table id="character-table" class="character-table sortable-table">
                                     <thead>
                                         <tr>
+                                            <th><input type="checkbox" id="char-select-all-checkbox" title="전체 선택" />
+                                            </th>
                                             <th data-sort="id" onclick="handleCharacterSort('id')">ID</th>
                                             <th data-sort="nickname" onclick="handleCharacterSort('nickname')">닉네임</th>
                                             <th data-sort="gender" onclick="handleCharacterSort('gender')">성별</th>
@@ -479,7 +489,7 @@
                         <br>
                         <div class="form-group">
                             <label>AI 캐릭터 닉네임 생성 프롬프트</label>
-                            <p class="hint">사용 가능 변수: {gender}, {age}, {job}, {mbti}, {mbti_desc}</p>
+                            <p class="hint">사용 가능 변수: {gender}, {age}, {job}, {hobby}, {mbti}, {mbti_desc}</p>
                             <textarea id="prompt-nickname" class="form-input" rows="5"></textarea>
                             <div class="button-group-right">
                                 <button class="btn-warning btn-reset-prompt" data-key="nickname_gen">초기화</button>
