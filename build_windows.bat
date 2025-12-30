@@ -46,6 +46,14 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
+echo [0/4] 아이콘 리소스 업데이트...
+copy /Y "icon\app_icon_256.ico" "build\windows\icon.ico" >nul
+copy /Y "icon\app_icon_512.png" "build\appicon.png" >nul
+if exist "build\darwin" (
+    copy /Y "icon\app_icon.icns" "build\darwin\icon.icns" >nul
+)
+
+echo.
 echo [1/4] Go 모듈 다운로드...
 go mod download
 if %ERRORLEVEL% neq 0 (

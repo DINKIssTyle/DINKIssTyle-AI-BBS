@@ -12,9 +12,8 @@ import (
 type DeviceType string
 
 const (
-	DeviceOld    DeviceType = "old"
-	DeviceModern DeviceType = "modern"
-	DeviceMobile DeviceType = "mobile"
+	DeviceOld     DeviceType = "old"
+	DeviceUnified DeviceType = "unified" // 반응형 템플릿 (데스크톱/모바일 통합)
 )
 
 // ThemeColors 테마 색상 정의
@@ -43,7 +42,7 @@ func (tm *ThemeManager) SetConfig(config models.BBSConfig) {
 	tm.config = config
 }
 
-// DetectDevice User-Agent 기반 기기 감지
+// DetectDevice User-Agent 기반 기기 감지 (Old 브라우저만 분리)
 func (tm *ThemeManager) DetectDevice(r *http.Request) DeviceType {
 	ua := r.Header.Get("User-Agent")
 	if ua == "" {
@@ -52,18 +51,14 @@ func (tm *ThemeManager) DetectDevice(r *http.Request) DeviceType {
 
 	uaLower := strings.ToLower(ua)
 
-	// Mobile 감지
-	if strings.Contains(uaLower, "mobile") || strings.Contains(uaLower, "android") || strings.Contains(uaLower, "iphone") {
-		return DeviceMobile
-	}
-
 	// Old 브라우저 감지 (Netscape, MSIE 9 미만 등)
 	if strings.Contains(uaLower, "mozilla/2.0") || strings.Contains(uaLower, "mozilla/3.0") ||
 		strings.Contains(uaLower, "mozilla/4.0") || strings.Contains(uaLower, "msie") {
 		return DeviceOld
 	}
 
-	return DeviceModern
+	// 나머지는 모두 통합 반응형 템플릿 사용
+	return DeviceUnified
 }
 
 // GetColors 현재 설정된 테마의 색상 반환

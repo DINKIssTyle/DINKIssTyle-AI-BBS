@@ -74,6 +74,15 @@ func (ws *WebServer) loadTemplates() {
 	funcMap := template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
+		"lt":  func(a, b int) bool { return a < b },
+		"gt":  func(a, b int) bool { return a > b },
+		"iterate": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
 		"nl2br": func(text string) template.HTML {
 			return template.HTML(strings.ReplaceAll(text, "\n", "<br>"))
 		},
@@ -116,19 +125,13 @@ func (ws *WebServer) loadTemplates() {
 	tmpl = template.Must(tmpl.New("classic/edit.html").Parse(editTemplateClassic))
 	tmpl = template.Must(tmpl.New("classic/comment_edit.html").Parse(commentEditTemplateClassic))
 
-	// Modern Templates
-	tmpl = template.Must(tmpl.New("modern/board.html").Parse(boardTemplateModern))
-	tmpl = template.Must(tmpl.New("modern/post.html").Parse(postTemplateModern))
-	tmpl = template.Must(tmpl.New("modern/write.html").Parse(writeTemplateModern))
-	tmpl = template.Must(tmpl.New("modern/login.html").Parse(loginTemplateModern))
-	tmpl = template.Must(tmpl.New("modern/register.html").Parse(registerTemplateModern))
-	tmpl = template.Must(tmpl.New("modern/edit.html").Parse(editTemplateModern))
-
-	// Mobile Templates
-	tmpl = template.Must(tmpl.New("mobile/board.html").Parse(boardTemplateMobile))
-	tmpl = template.Must(tmpl.New("mobile/post.html").Parse(postTemplateMobile))
-	tmpl = template.Must(tmpl.New("mobile/login.html").Parse(loginTemplateMobile))
-	tmpl = template.Must(tmpl.New("mobile/write.html").Parse(writeTemplateMobile))
+	// Unified Responsive Templates (데스크톱/모바일 통합)
+	tmpl = template.Must(tmpl.New("unified/board.html").Parse(boardTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/post.html").Parse(postTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/write.html").Parse(writeTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/login.html").Parse(loginTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/register.html").Parse(registerTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/edit.html").Parse(writeTemplateUnified))
 	fmt.Println("[DEBUG] Templates parsed successfully")
 
 	ws.templates = tmpl
@@ -160,7 +163,7 @@ func (ws *WebServer) renderTemplate(w http.ResponseWriter, tmplName string, data
 	err := ws.templates.ExecuteTemplate(&buf, fullTmplName, data)
 	if err != nil {
 		log.Printf("[ERROR] Template execution failed (%s): %v", fullTmplName, err)
-		http.Error(w, "Template Error", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Template Error: %s - %v", fullTmplName, err), http.StatusInternalServerError)
 		return
 	}
 
@@ -426,8 +429,24 @@ func (ws *WebServer) handlePost(w http.ResponseWriter, r *http.Request) {
 	comments, _ := ws.commentService.GetComments(id)
 	data["Comments"] = comments
 
-	// 댓글 작성 처리
+	// 작성자 확인 및 관리자 여부
 	user := data["User"].(*models.User)
+	isAuthor := false
+	isAdmin := false
+	if user != nil {
+		isAdmin = user.IsAdmin
+		if post.AuthorType == "user" && post.AuthorID == user.ID {
+			isAuthor = true
+		}
+	}
+	data["IsAuthor"] = isAuthor
+	data["IsAdmin"] = isAdmin
+	data["UserID"] = 0
+	if user != nil {
+		data["UserID"] = user.ID
+	}
+
+	// 댓글 작성 처리
 	if r.Method == "POST" && user != nil {
 		content := r.FormValue("content")
 		if content != "" {
