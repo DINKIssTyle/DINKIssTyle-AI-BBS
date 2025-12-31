@@ -218,6 +218,10 @@ export function SavePrompt(arg1, arg2) {
   return window['go']['main']['App']['SavePrompt'](arg1, arg2);
 }
 
+export function SaveWebServerConfig(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SaveWebServerConfig'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function SelectFile(arg1, arg2) {
   return window['go']['main']['App']['SelectFile'](arg1, arg2);
 }

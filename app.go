@@ -814,8 +814,8 @@ func (a *App) GetWebServerConfig() map[string]interface{} {
 		"registrationOpen": a.webServer.IsRegistrationOpen(),
 		"running":          a.webServer.IsRunning(),
 		"sslEnabled":       config.SSLEnabled,
-		"sslCert":          config.SSLCertPath,
-		"sslKey":           config.SSLKeyPath,
+		"sslCertPath":      config.SSLCertPath,
+		"sslKeyPath":       config.SSLKeyPath,
 	}
 }
 
@@ -952,6 +952,49 @@ func (a *App) SaveBBSConfig(title, footer, theme, font string, postsPerPage int,
 		}
 	}
 	return nil
+}
+
+// SaveWebServerConfig 웹 서버 설정 저장
+func (a *App) SaveWebServerConfig(port string, registration bool, sslEnabled bool, sslCert, sslKey string) error {
+	if a.webServer != nil {
+		a.webServer.SetPort(port)
+		a.webServer.SetRegistrationOpen(registration)
+
+		// SSL 설정을 BBSConfig에 반영 (기존 설정 유지하며 업데이트)
+		config := a.webServer.GetBBSConfig()
+		config.SSLEnabled = sslEnabled
+		config.SSLCertPath = sslCert
+		config.SSLKeyPath = sslKey
+		a.webServer.SetBBSConfig(config)
+	}
+
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	queries := map[string]string{
+		"web_port":         port,
+		"web_registration": strconv.FormatBool(registration),
+		"web_ssl_enabled":  strconv.FormatBool(sslEnabled),
+		"web_ssl_cert":     sslCert,
+		"web_ssl_key":      sslKey,
+	}
+
+	for k, v := range queries {
+		_, err := tx.Exec("INSERT OR REPLACE INTO settings (key_name, value) VALUES (?, ?)", k, v)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // GetBBSConfig BBS 설정 조회

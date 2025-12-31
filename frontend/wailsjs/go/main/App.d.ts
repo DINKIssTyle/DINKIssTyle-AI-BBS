@@ -111,6 +111,8 @@ export function SaveMBTIDescription(arg1:string,arg2:string):Promise<void>;
 
 export function SavePrompt(arg1:string,arg2:string):Promise<void>;
 
+export function SaveWebServerConfig(arg1:string,arg2:boolean,arg3:boolean,arg4:string,arg5:string):Promise<void>;
+
 export function SelectFile(arg1:string,arg2:string):Promise<string>;
 
 export function SetUserAdmin(arg1:number,arg2:boolean):Promise<void>;
