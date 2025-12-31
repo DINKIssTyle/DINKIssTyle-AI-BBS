@@ -414,9 +414,61 @@
 
                         <!-- 생성 참조값 탭 -->
                         <div id="char-tab-refs" class="char-tab-content" style="display:none;">
-                            <p class="description">AI 캐릭터 자동 생성 시 사용되는 참조값입니다. 쉼표(,)로 구분하여 입력하세요.</p>
+
+
+                            <div class="form-group settings-group" style="padding: 0; margin-bottom: 20px;">
+                                <h4 style="margin-top: 0; margin-bottom: 10px; color: #e2e8f0; font-size: 1.1em;">기본 생성
+                                    설정</h4>
+                                <div style="display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start;">
+
+                                    <!-- 연령 설정 -->
+                                    <div style="flex: 0 0 auto;">
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                            <input type="checkbox" id="chk-use-age" class="form-checkbox">
+                                            <label for="chk-use-age" style="cursor: pointer; user-select: none;">연령 범위
+                                                사용자 정의</label>
+                                        </div>
+                                        <div id="group-age-settings"
+                                            style="display: flex; align-items: center; gap: 10px; padding-left: 24px; opacity: 0.5; pointer-events: none;">
+                                            <input type="number" id="ref-min-age" class="form-input" value="15" min="1"
+                                                max="100" style="width: 70px; text-align: center;">
+                                            <span>세 ~</span>
+                                            <input type="number" id="ref-max-age" class="form-input" value="64" min="1"
+                                                max="100" style="width: 70px; text-align: center;">
+                                            <span>세</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- 성비 설정 -->
+                                    <div style="flex: 0 0 auto;">
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                            <input type="checkbox" id="chk-use-gender" class="form-checkbox">
+                                            <label for="chk-use-gender" style="cursor: pointer; user-select: none;">성비
+                                                사용자 정의</label>
+                                        </div>
+                                        <div id="group-gender-settings"
+                                            style="display: flex; align-items: center; gap: 10px; padding-left: 24px; opacity: 0.5; pointer-events: none;">
+                                            <span style="color: #60a5fa;">남</span>
+                                            <input type="number" id="ref-male-ratio" class="form-input" value="50"
+                                                min="0" max="100" style="width: 70px; text-align: center;">
+                                            <span>%</span>
+                                            <span style="color: #94a3b8;">/</span>
+                                            <span style="color: #f472b6;">여</span>
+                                            <span id="ref-female-ratio-display"
+                                                style="font-weight: bold; min-width: 30px; text-align: center;">50</span>
+                                            <span>%</span>
+                                        </div>
+                                    </div>
+
+                                    <div style="flex: 0 0 auto; display: flex; align-items: flex-end;">
+                                        <button class="btn-primary" id="btn-save-gen-settings" style="height: 36px;">설정
+                                            저장</button>
+                                    </div>
+                                </div>
+                            </div>
                             <br>
                             <div class="form-group">
+                                <p class="description">AI 캐릭터 자동 생성 시 사용되는 참조값입니다. 쉼표(,)로 구분하여 입력하세요.</p>
                                 <label>직종 목록</label>
                                 <p class="hint">예: 무직, 학생, 회사원, IT개발자, ...</p>
                                 <textarea id="ref-job-categories" class="form-input" rows="8"></textarea>

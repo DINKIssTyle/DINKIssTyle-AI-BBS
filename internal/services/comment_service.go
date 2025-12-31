@@ -75,7 +75,8 @@ func (s *CommentService) GetComments(postID int) ([]*models.Comment, error) {
 	defer rows.Close()
 
 	commentMap := make(map[int]*models.Comment)
-	var rootComments []*models.Comment
+	var allComments []*models.Comment  // 순서 보장을 위한 슬라이스
+	var rootComments []*models.Comment // 결과 반환용 슬라이스
 
 	for rows.Next() {
 		c := &models.Comment{}
@@ -97,10 +98,11 @@ func (s *CommentService) GetComments(postID int) ([]*models.Comment, error) {
 		}
 
 		commentMap[c.ID] = c
+		allComments = append(allComments, c)
 	}
 
-	// 댓글 트리 구성
-	for _, c := range commentMap {
+	// 댓글 트리 구성 (allComments 순회로 순서 보장)
+	for _, c := range allComments {
 		if c.ParentID == nil {
 			rootComments = append(rootComments, c)
 		} else {

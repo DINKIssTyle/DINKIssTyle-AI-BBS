@@ -51,6 +51,8 @@ export function GetDatabaseInfo():Promise<Record<string, any>>;
 
 export function GetDatabaseList():Promise<Array<string>>;
 
+export function GetGenSettings():Promise<Record<string, any>>;
+
 export function GetHobbies():Promise<Array<string>>;
 
 export function GetJobCategories():Promise<Array<string>>;
@@ -100,6 +102,8 @@ export function ResetPrompt(arg1:string):Promise<void>;
 export function SaveBBSConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:string):Promise<void>;
 
 export function SaveCharacterRefValue(arg1:string,arg2:string):Promise<void>;
+
+export function SaveGenSettings(arg1:number,arg2:number,arg3:number,arg4:boolean,arg5:boolean):Promise<void>;
 
 export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number):Promise<void>;
 

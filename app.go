@@ -1075,6 +1075,96 @@ func (a *App) SaveCharacterRefValue(key, value string) error {
 	return err
 }
 
+// SaveGenSettings 캐릭터 생성 기본 설정 저장
+func (a *App) SaveGenSettings(minAge, maxAge, maleRatio int, useAge, useGender bool) error {
+	db := a.db.GetDB()
+	if db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	queries := map[string]string{
+		"ref_min_age":    strconv.Itoa(minAge),
+		"ref_max_age":    strconv.Itoa(maxAge),
+		"ref_male_ratio": strconv.Itoa(maleRatio),
+		"ref_use_age":    strconv.FormatBool(useAge),
+		"ref_use_gender": strconv.FormatBool(useGender),
+	}
+
+	for k, v := range queries {
+		_, err := tx.Exec("INSERT OR REPLACE INTO settings (key_name, value) VALUES (?, ?)", k, v)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetGenSettings 캐릭터 생성 기본 설정 조회
+func (a *App) GetGenSettings() (map[string]interface{}, error) {
+	db := a.db.GetDB()
+	if db == nil {
+		return nil, fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	settings := map[string]interface{}{
+		"min_age":    15, // 기본값
+		"max_age":    64,
+		"male_ratio": 50,
+		"use_age":    true, // 기본적으로는 true로 두되, DB 없으면 true
+		"use_gender": true,
+	}
+
+	// Int 값 로드
+	intKeys := []string{"ref_min_age", "ref_max_age", "ref_male_ratio"}
+	for _, key := range intKeys {
+		var valStr string
+		err := db.QueryRow("SELECT value FROM settings WHERE key_name = ?", key).Scan(&valStr)
+		if err == nil {
+			val, err := strconv.Atoi(valStr)
+			if err == nil {
+				settings[strings.TrimPrefix(key, "ref_")] = val
+			}
+		}
+	}
+
+	// Bool 값 로드
+	boolKeys := []string{"ref_use_age", "ref_use_gender"}
+	for _, key := range boolKeys {
+		var valStr string
+		err := db.QueryRow("SELECT value FROM settings WHERE key_name = ?", key).Scan(&valStr)
+		if err == nil {
+			val, err := strconv.ParseBool(valStr)
+			if err == nil {
+				settings[strings.TrimPrefix(key, "ref_")] = val
+			} else {
+				// 1/0 or true/false
+				if valStr == "1" || valStr == "true" {
+					settings[strings.TrimPrefix(key, "ref_")] = true
+				} else {
+					settings[strings.TrimPrefix(key, "ref_")] = false
+				}
+			}
+		} else {
+			// DB에 값이 없으면 기본적으로 false (사용자가 의도적으로 켜야 함)
+			// 요청사항: "체크한 것만 ... 그렇지 않은것은 이전처럼"
+			// 이전처럼 == 15~64, 50:50.
+			// 그러니 기본값 false로 두는 게 맞을 수도 있다?
+			// 아니면 UI상 기본 체크 여부.
+			// 여기서는 기본값을 false로 둡니다.
+			settings[strings.TrimPrefix(key, "ref_")] = false
+		}
+	}
+
+	return settings, nil
+}
+
 // ResetCharacterRefValue 캐릭터 생성 참조값 기본값으로 초기화
 func (a *App) ResetCharacterRefValue(key string) (string, error) {
 	db := a.db.GetDB()

@@ -10,11 +10,83 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+// ...
+
+// loadGenSettings 캐릭터 생성 설정 로드
+func (s *CharacterService) loadGenSettings() (int, int, int, bool, bool) {
+	minAge := 15
+	maxAge := 64
+	maleRatio := 50
+
+	db := s.db.GetDB()
+	if db == nil {
+		return minAge, maxAge, maleRatio, false, false
+	}
+
+	getInt := func(key string) int {
+		var valStr string
+		err := db.QueryRow("SELECT value FROM settings WHERE key_name = ?", key).Scan(&valStr)
+		if err == nil {
+			val, err := strconv.Atoi(valStr)
+			if err == nil {
+				return val
+			}
+		}
+		return -1 // Not found or error
+	}
+
+	if v := getInt("ref_min_age"); v != -1 {
+		minAge = v
+	}
+	if v := getInt("ref_max_age"); v != -1 {
+		maxAge = v
+	}
+	if v := getInt("ref_male_ratio"); v != -1 {
+		maleRatio = v
+	}
+
+	// Bool 값 로드
+	useAge := false
+	useGender := false
+
+	getBool := func(key string) bool {
+		var valStr string
+		err := db.QueryRow("SELECT value FROM settings WHERE key_name = ?", key).Scan(&valStr)
+		if err == nil {
+			if valStr == "1" || valStr == "true" {
+				return true
+			}
+		}
+		return false
+	}
+	useAge = getBool("ref_use_age")
+	useGender = getBool("ref_use_gender")
+
+	// 값 유효성 보정
+	if minAge < 1 {
+		minAge = 1
+	}
+	if maxAge > 100 {
+		maxAge = 100
+	}
+	if minAge > maxAge {
+		minAge, maxAge = maxAge, minAge
+	}
+	if maleRatio < 0 {
+		maleRatio = 0
+	} else if maleRatio > 100 {
+		maleRatio = 100
+	}
+
+	return minAge, maxAge, maleRatio, useAge, useGender
+}
 
 // CharacterService AI 캐릭터 서비스
 type CharacterService struct {
@@ -75,7 +147,23 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	characters := make([]models.AICharacter, 0, count)
-	genders := []string{"남성", "여성"}
+
+	// 생성 설정 로드
+	minAgeSettings, maxAgeSettings, maleRatioSettings, useAge, useGender := s.loadGenSettings()
+
+	// 기본값 준비
+	minAge := 15
+	maxAge := 64
+	maleRatio := 50
+
+	// 사용자 설정 있으면 적용
+	if useAge {
+		minAge = minAgeSettings
+		maxAge = maxAgeSettings
+	}
+	if useGender {
+		maleRatio = maleRatioSettings
+	}
 
 	// DB에서 참조값 로드 (없으면 기본값 사용)
 	jobCategories := s.loadRefValues("job_categories", models.JobCategories)
@@ -106,10 +194,19 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 			nickname = fmt.Sprintf("활동전AI%d_%d", i+1, rng.Intn(1000))
 		}
 
+		// 성별 결정
+		gender := "여성"
+		if rng.Intn(100) < maleRatio {
+			gender = "남성"
+		}
+
+		// 나이 결정 (minAge ~ maxAge)
+		age := rng.Intn(maxAge-minAge+1) + minAge
+
 		character := models.AICharacter{
 			Nickname:           nickname,
-			Gender:             genders[rng.Intn(2)],
-			Age:                rng.Intn(50) + 15, // 15~64세
+			Gender:             gender,
+			Age:                age,
 			Region:             regions[rng.Intn(len(regions))],
 			Hobby:              hobbies[rng.Intn(len(hobbies))],
 			JobCategory:        jobCategories[rng.Intn(len(jobCategories))],

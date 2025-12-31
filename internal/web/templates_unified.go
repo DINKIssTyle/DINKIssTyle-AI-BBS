@@ -81,7 +81,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
             display: none; position: absolute; top: 100%; left: 0; 
             background: var(--table-bg); min-width: 140px; 
             box-shadow: 0 8px 16px rgba(0,0,0,0.5); border: 1px solid var(--border-color);
-            border-radius: 4px; z-index: 100; padding: 5px 0;
+            border-radius: 4px; z-index: 1000; padding: 5px 0; margin-top: 0;
         }
         .nickname-container:hover { z-index: 200; }
         .nickname-container:hover .nickname-dropdown,
@@ -365,6 +365,26 @@ const postTemplateUnified = `<!DOCTYPE html>
         .post-content { line-height: 1.7; min-height: 200px; white-space: pre-wrap; }
         .post-actions { display: flex; justify-content: center; gap: 10px; margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-color); }
 
+
+        /* 닉네임 드롭다운 스타일 (목록, 본문, 댓글 통합) */
+        .nickname-container { position: relative; display: inline-block; cursor: pointer; }
+        .nickname-dropdown { 
+            display: none; position: absolute; top: 100%; left: 0; 
+            background: var(--table-bg); min-width: 140px; 
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); border: 1px solid var(--border-color);
+            z-index: 1000; border-radius: 6px; overflow: hidden; padding: 5px 0;
+            margin-top: 0;
+        }
+        /* 데스크탑 호버 및 모바일/클릭 활성화 */
+        .nickname-container:hover .nickname-dropdown,
+        .nickname-container.active .nickname-dropdown { display: block; }
+        
+        .dropdown-item { 
+            display: block; padding: 10px 15px; color: var(--text-color); 
+            text-decoration: none; font-size: 0.9rem; transition: background 0.2s;
+        }
+        .dropdown-item:hover { background: var(--primary-color); color: #fff; text-decoration: none; }
+
         .comments-section { margin-top: 30px; }
         .comments-title { font-size: 1.1rem; margin-bottom: 15px; color: var(--primary-color); }
         .comment-item { background: var(--table-bg); border-radius: 8px; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-color); }
@@ -509,6 +529,24 @@ const postTemplateUnified = `<!DOCTYPE html>
     <script>
     // Console Toggle Logic
     document.addEventListener('DOMContentLoaded', function() {
+        // 닉네임 드롭다운 로직 (목록과 동일하게 동작)
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.nickname-container')) {
+                document.querySelectorAll('.nickname-container').forEach(function(el) {
+                    el.classList.remove('active');
+                });
+                return;
+            }
+            const container = e.target.closest('.nickname-container');
+            if (container) {
+                // 다른 열린 드롭다운 닫기
+                document.querySelectorAll('.nickname-container').forEach(function(el) {
+                    if (el !== container) el.classList.remove('active');
+                });
+                container.classList.toggle('active');
+            }
+        });
+
         const btnConsole = document.getElementById('btn-console-toggle');
         const logViewer = document.getElementById('header-log-viewer');
         
@@ -545,6 +583,23 @@ const postTemplateUnified = `<!DOCTYPE html>
                  // console.log("SSE Error");
              };
         }
+        // 닉네임 드롭다운 로직 (목록과 동일하게 동작)
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.nickname-container')) {
+                document.querySelectorAll('.nickname-container').forEach(function(el) {
+                    el.classList.remove('active');
+                });
+                return;
+            }
+            const container = e.target.closest('.nickname-container');
+            if (container) {
+                // 다른 열린 드롭다운 닫기
+                document.querySelectorAll('.nickname-container').forEach(function(el) {
+                    if (el !== container) el.classList.remove('active');
+                });
+                container.classList.toggle('active');
+            }
+        });
     });
 
     function editComment(id) {
@@ -815,6 +870,8 @@ const profileTemplateUnified = `<!DOCTYPE html>
         @media (max-width: 600px) {
             .profile-grid { grid-template-columns: 1fr; }
             .profile-header { flex-direction: column; text-align: center; }
+            .actions { flex-direction: column; gap: 10px; }
+            .actions .btn { width: 100%; text-align: center; }
         }
     </style>
 </head>

@@ -1172,15 +1172,100 @@ $$('.char-tab-btn').forEach(btn => {
 // ================================
 // 캐릭터 생성 참조값 관리
 // ================================
+// 생성 설정 UI 업데이트 (활성/비활성)
+function updateGenSettingsUI() {
+    const useAge = $('#chk-use-age').checked;
+    const useGender = $('#chk-use-gender').checked;
+
+    // Age Group
+    const ageGroup = $('#group-age-settings');
+    if (ageGroup) {
+        ageGroup.style.opacity = useAge ? '1' : '0.5';
+        ageGroup.style.pointerEvents = useAge ? 'auto' : 'none';
+    }
+
+    // Gender Group
+    const genderGroup = $('#group-gender-settings');
+    if (genderGroup) {
+        genderGroup.style.opacity = useGender ? '1' : '0.5';
+        genderGroup.style.pointerEvents = useGender ? 'auto' : 'none';
+    }
+}
+
+// 체크박스 이벤트 리스너 추가 (한 번만)
+const chkUseAge = $('#chk-use-age');
+if (chkUseAge && !chkUseAge.dataset.listenerAttached) {
+    chkUseAge.addEventListener('change', updateGenSettingsUI);
+    chkUseAge.dataset.listenerAttached = 'true';
+}
+const chkUseGender = $('#chk-use-gender');
+if (chkUseGender && !chkUseGender.dataset.listenerAttached) {
+    chkUseGender.addEventListener('change', updateGenSettingsUI);
+    chkUseGender.dataset.listenerAttached = 'true';
+}
+
 async function loadCharacterRefValues() {
     try {
         const refs = await go.GetCharacterRefValues();
         $('#ref-job-categories').value = refs.job_categories || '';
         $('#ref-hobbies').value = refs.hobbies || '';
         $('#ref-regions').value = refs.regions || '';
+
+        // 생성 기본 설정 로드
+        const settings = await go.GetGenSettings();
+        if (settings) {
+            if ($('#ref-min-age')) $('#ref-min-age').value = settings.min_age;
+            if ($('#ref-max-age')) $('#ref-max-age').value = settings.max_age;
+            if ($('#ref-male-ratio')) {
+                $('#ref-male-ratio').value = settings.male_ratio;
+                $('#ref-female-ratio-display').textContent = 100 - settings.male_ratio;
+            }
+            if ($('#chk-use-age')) $('#chk-use-age').checked = settings.use_age;
+            if ($('#chk-use-gender')) $('#chk-use-gender').checked = settings.use_gender;
+
+            updateGenSettingsUI();
+        }
     } catch (e) {
         console.error('참조값 로드 실패', e);
     }
+}
+
+// 생성 기본 설정 저장 버튼
+const btnSaveGenSettings = $('#btn-save-gen-settings');
+if (btnSaveGenSettings) {
+    btnSaveGenSettings.addEventListener('click', async () => {
+        const minAge = parseInt($('#ref-min-age').value) || 15;
+        const maxAge = parseInt($('#ref-max-age').value) || 64;
+        const maleRatio = parseInt($('#ref-male-ratio').value) || 50;
+        const useAge = $('#chk-use-age').checked;
+        const useGender = $('#chk-use-gender').checked;
+
+        if (useAge && minAge > maxAge) {
+            showToast('최소 나이가 최대 나이보다 클 수 없습니다.', 'error');
+            return;
+        }
+        if (useGender && (maleRatio < 0 || maleRatio > 100)) {
+            showToast('성비는 0~100 사이여야 합니다.', 'error');
+            return;
+        }
+
+        try {
+            await go.SaveGenSettings(minAge, maxAge, maleRatio, useAge, useGender);
+            showToast('기본 설정이 저장되었습니다.');
+        } catch (e) {
+            showToast('설정 저장 실패: ' + e, 'error');
+        }
+    });
+
+    // 성비 자동 계산
+    $('#ref-male-ratio').addEventListener('input', (e) => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val)) val = 0;
+        if (val < 0) val = 0;
+        if (val > 100) val = 100;
+
+        $('#ref-female-ratio-display').textContent = 100 - val;
+    });
 }
 
 // 참조값 저장 버튼

@@ -98,6 +98,10 @@ export function GetDatabaseList() {
   return window['go']['main']['App']['GetDatabaseList']();
 }
 
+export function GetGenSettings() {
+  return window['go']['main']['App']['GetGenSettings']();
+}
+
 export function GetHobbies() {
   return window['go']['main']['App']['GetHobbies']();
 }
@@ -196,6 +200,10 @@ export function SaveBBSConfig(arg1, arg2, arg3, arg4, arg5, arg6) {
 
 export function SaveCharacterRefValue(arg1, arg2) {
   return window['go']['main']['App']['SaveCharacterRefValue'](arg1, arg2);
+}
+
+export function SaveGenSettings(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SaveGenSettings'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function SaveLLMConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
