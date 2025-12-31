@@ -242,3 +242,140 @@ func (d *Database) ResetDatabase() error {
 
 	return nil
 }
+
+// ListDatabases 실행 파일 디렉토리에서 .db 파일 목록을 반환합니다.
+func (d *Database) ListDatabases() ([]string, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	if d.dbPath == "" {
+		return nil, fmt.Errorf("데이터베이스 경로가 설정되지 않았습니다")
+	}
+
+	dir := filepath.Dir(d.dbPath)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("디렉토리 읽기 실패: %w", err)
+	}
+
+	var dbFiles []string
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".db" {
+			dbFiles = append(dbFiles, entry.Name())
+		}
+	}
+
+	return dbFiles, nil
+}
+
+// SwitchDatabase 다른 데이터베이스로 전환합니다.
+func (d *Database) SwitchDatabase(name string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// 기존 연결 닫기
+	if d.db != nil {
+		d.db.Close()
+		d.db = nil
+	}
+
+	// 새 경로 설정
+	dir := filepath.Dir(d.dbPath)
+	newPath := filepath.Join(dir, name)
+	d.dbPath = newPath
+
+	// 파일 존재 확인
+	if _, err := os.Stat(newPath); os.IsNotExist(err) {
+		return fmt.Errorf("데이터베이스 파일이 존재하지 않습니다: %s", name)
+	}
+
+	// 새 DB 연결
+	db, err := sql.Open("sqlite", newPath+"?_foreign_keys=on")
+	if err != nil {
+		return fmt.Errorf("DB 연결 실패: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("DB 핑 실패: %w", err)
+	}
+
+	d.db = db
+
+	// SQLite 최적화
+	db.Exec("PRAGMA journal_mode=WAL;")
+	db.Exec("PRAGMA busy_timeout=5000;")
+
+	fmt.Printf("[DEBUG] 데이터베이스 전환됨: %s\n", name)
+	return nil
+}
+
+// CreateNewDatabase 새 데이터베이스 파일을 생성하고 스키마를 적용합니다.
+func (d *Database) CreateNewDatabase(name string, schemaSQL string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	dir := filepath.Dir(d.dbPath)
+	newPath := filepath.Join(dir, name)
+
+	// 이미 존재하는지 확인
+	if _, err := os.Stat(newPath); err == nil {
+		return fmt.Errorf("데이터베이스가 이미 존재합니다: %s", name)
+	}
+
+	// 기존 연결 닫기
+	if d.db != nil {
+		d.db.Close()
+		d.db = nil
+	}
+
+	// 새 DB 생성 및 연결
+	db, err := sql.Open("sqlite", newPath+"?_foreign_keys=on")
+	if err != nil {
+		return fmt.Errorf("DB 생성 실패: %w", err)
+	}
+
+	d.db = db
+	d.dbPath = newPath
+
+	// SQLite 최적화
+	db.Exec("PRAGMA journal_mode=WAL;")
+	db.Exec("PRAGMA busy_timeout=5000;")
+
+	// 스키마 적용
+	if schemaSQL != "" {
+		if _, err := db.Exec(schemaSQL); err != nil {
+			return fmt.Errorf("스키마 적용 실패: %w", err)
+		}
+	}
+
+	// 마이그레이션 실행
+	d.mu.Unlock()
+	err = d.Migrate()
+	d.mu.Lock()
+	if err != nil {
+		return fmt.Errorf("마이그레이션 실패: %w", err)
+	}
+
+	fmt.Printf("[DEBUG] 새 데이터베이스 생성됨: %s\n", name)
+	return nil
+}
+
+// GetDatabaseSize 현재 데이터베이스 파일 크기를 바이트 단위로 반환합니다.
+func (d *Database) GetDatabaseSize() (int64, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+
+	info, err := os.Stat(d.dbPath)
+	if err != nil {
+		return 0, fmt.Errorf("파일 정보 조회 실패: %w", err)
+	}
+
+	return info.Size(), nil
+}
+
+// GetCurrentDBName 현재 데이터베이스 파일 이름만 반환합니다.
+func (d *Database) GetCurrentDBName() string {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return filepath.Base(d.dbPath)
+}

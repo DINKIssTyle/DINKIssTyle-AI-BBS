@@ -166,6 +166,10 @@ function initEventListeners() {
             if (tabId === 'ai') loadCharacters();
             if (tabId === 'server') loadWebConfig();
             if (tabId === 'bbs') loadBBSConfig();
+            if (tabId === 'database') {
+                loadDatabaseList();
+                loadDatabaseInfo();
+            }
             if (tabId === 'ai-prompts') {
                 loadCompPrompts();
                 loadMBTIList();
@@ -187,6 +191,8 @@ function initEventListeners() {
     $('#btn-reset-db').addEventListener('click', () => showModal('confirm-modal'));
     $('#btn-confirm-reset').addEventListener('click', resetDatabase);
     $('#btn-cancel-reset').addEventListener('click', () => hideModal('confirm-modal'));
+    $('#btn-create-db')?.addEventListener('click', createNewDatabase);
+    $('#db-select')?.addEventListener('change', switchDatabase);
 
     // LLM 관리
     $('#btn-test-llm').addEventListener('click', testLLMConnection);
@@ -467,8 +473,109 @@ async function checkDBStatus() {
         if (connected) {
             const aiRunning = await go.IsAIActivityRunning();
             updateAIStatus(aiRunning);
+            // DB 목록 및 정보 로드
+            loadDatabaseList();
+            loadDatabaseInfo();
         }
     } catch (e) { console.log('DB 상태 확인 실패:', e); }
+}
+
+// DB 목록 로드
+async function loadDatabaseList() {
+    try {
+        const list = await go.GetDatabaseList();
+        const current = await go.GetCurrentDatabase();
+        const select = $('#db-select');
+        if (!select) return;
+
+        select.innerHTML = '';
+        list.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            if (name === current) opt.selected = true;
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.log('DB 목록 로드 실패:', e);
+    }
+}
+
+// DB 정보 로드
+async function loadDatabaseInfo() {
+    try {
+        const info = await go.GetDatabaseInfo();
+        if ($('#db-info-title')) $('#db-info-title').textContent = info.title || '-';
+        if ($('#db-info-system-role')) {
+            const role = info.systemRole || '-';
+            $('#db-info-system-role').textContent = role.length > 50 ? role.substring(0, 50) + '...' : role;
+        }
+        if ($('#db-info-posts')) $('#db-info-posts').textContent = info.postCount || 0;
+        if ($('#db-info-comments')) $('#db-info-comments').textContent = info.commentCount || 0;
+        if ($('#db-info-size')) $('#db-info-size').textContent = formatFileSize(info.size || 0);
+    } catch (e) {
+        console.log('DB 정보 로드 실패:', e);
+    }
+}
+
+// 파일 크기 포맷
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// DB 전환
+async function switchDatabase() {
+    const select = $('#db-select');
+    if (!select) return;
+
+    const name = select.value;
+    if (!name) return;
+
+    const current = await go.GetCurrentDatabase();
+    if (name === current) return;
+
+    if (!confirm(`"${name}" 데이터베이스로 전환하시겠습니까?\n\n※ 웹 서버와 AI 활동이 중지됩니다.`)) {
+        // 원래 선택으로 복원
+        loadDatabaseList();
+        return;
+    }
+
+    try {
+        await go.SwitchDatabase(name);
+        showToast(`"${name}"로 전환되었습니다`);
+        loadDatabaseInfo();
+        loadDatabaseList();
+        checkDBStatus();
+    } catch (e) {
+        showToast('DB 전환 실패: ' + e, 'error');
+        loadDatabaseList();
+    }
+}
+
+// 새 DB 생성
+async function createNewDatabase() {
+    const name = prompt('새 데이터베이스 파일 이름을 입력하세요.\n(확장자 .db는 자동 추가됩니다)');
+    if (!name) return;
+
+    // 유효성 검사
+    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '');
+    if (safeName !== name) {
+        showToast('파일 이름에는 영문, 숫자, _, - 만 사용 가능합니다', 'error');
+        return;
+    }
+
+    try {
+        await go.CreateNewDatabase(safeName);
+        showToast(`새 데이터베이스 "${safeName}.db"가 생성되었습니다`);
+        loadDatabaseList();
+        loadDatabaseInfo();
+    } catch (e) {
+        showToast('DB 생성 실패: ' + e, 'error');
+    }
 }
 
 async function resetDatabase() {
@@ -479,6 +586,7 @@ async function resetDatabase() {
         hideModal('confirm-modal');
         $('#confirm-input').value = '';
         loadUsers();
+        loadDatabaseInfo();
         const chars = await go.GetAllCharacters();
         renderCharacters(chars);
     } catch (e) { showToast('초기화 실패: ' + e, 'error'); }

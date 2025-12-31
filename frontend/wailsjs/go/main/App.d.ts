@@ -13,6 +13,8 @@ export function ChangePassword(arg1:string,arg2:string):Promise<void>;
 
 export function CreateComment(arg1:number,arg2:string,arg3:any):Promise<models.Comment>;
 
+export function CreateNewDatabase(arg1:string):Promise<void>;
+
 export function CreatePost(arg1:string,arg2:string,arg3:boolean):Promise<models.Post>;
 
 export function CreateUser(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -39,7 +41,13 @@ export function GetCharacterRefValues():Promise<Record<string, string>>;
 
 export function GetComments(arg1:number):Promise<Array<models.Comment>>;
 
+export function GetCurrentDatabase():Promise<string>;
+
 export function GetCurrentUser():Promise<models.User>;
+
+export function GetDatabaseInfo():Promise<Record<string, any>>;
+
+export function GetDatabaseList():Promise<Array<string>>;
 
 export function GetHobbies():Promise<Array<string>>;
 
@@ -108,6 +116,8 @@ export function StartWebServer(arg1:string,arg2:boolean,arg3:boolean,arg4:string
 export function StopAIActivity():Promise<void>;
 
 export function StopWebServer():Promise<void>;
+
+export function SwitchDatabase(arg1:string):Promise<void>;
 
 export function TestLLMConnection(arg1:string,arg2:string,arg3:string):Promise<void>;
 

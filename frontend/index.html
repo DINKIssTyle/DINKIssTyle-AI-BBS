@@ -454,14 +454,53 @@
                     <!-- 데이터베이스 탭 -->
                     <div id="tab-database" class="tab-content">
                         <h3>데이터베이스 (SQLite)</h3>
-                        <p>데이터베이스가 자동으로 연결됩니다. (aibbs.db)</p>
                         <p id="db-status">상태: <span id="db-status-text">연결됨</span></p>
+
+                        <div class="control-panel" style="margin-top: 15px;">
+                            <div class="form-group">
+                                <label>데이터베이스 선택</label>
+                                <select id="db-select" class="form-input" style="width: 100%;">
+                                    <option value="">로딩 중...</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <hr />
+
+                        <h4>현재 데이터베이스 정보</h4>
+                        <div class="status-card">
+                            <div class="status-item">
+                                <span class="label">게시판 타이틀:</span>
+                                <span id="db-info-title" class="value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="label">시스템 롤:</span>
+                                <span id="db-info-system-role" class="value"
+                                    style="font-size: 0.85em; color: #aaa;">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="label">글 수:</span>
+                                <span id="db-info-posts" class="value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="label">댓글 수:</span>
+                                <span id="db-info-comments" class="value">-</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="label">데이터베이스 크기:</span>
+                                <span id="db-info-size" class="value">-</span>
+                            </div>
+                        </div>
+
+                        <hr />
+
                         <h4>데이터베이스 관리</h4>
                         <div class="button-group">
+                            <button id="btn-create-db" class="btn-primary">새 데이터베이스 생성</button>
                             <button id="btn-reset-db" class="btn-danger">초기화</button>
                         </div>
-                        <p style="color: #888; font-size: 12px;">※ 초기화 시 모든 데이터가 삭제됩니다.</p>
+                        <p style="color: #888; font-size: 12px; margin-top: 10px;">※ 초기화 시 선택된 데이터베이스의 모든 데이터가 삭제됩니다.
+                        </p>
                     </div>
 
                     <!-- 게시판 설정 탭 -->

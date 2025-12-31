@@ -22,6 +22,10 @@ export function CreateComment(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreateComment'](arg1, arg2, arg3);
 }
 
+export function CreateNewDatabase(arg1) {
+  return window['go']['main']['App']['CreateNewDatabase'](arg1);
+}
+
 export function CreatePost(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreatePost'](arg1, arg2, arg3);
 }
@@ -74,8 +78,20 @@ export function GetComments(arg1) {
   return window['go']['main']['App']['GetComments'](arg1);
 }
 
+export function GetCurrentDatabase() {
+  return window['go']['main']['App']['GetCurrentDatabase']();
+}
+
 export function GetCurrentUser() {
   return window['go']['main']['App']['GetCurrentUser']();
+}
+
+export function GetDatabaseInfo() {
+  return window['go']['main']['App']['GetDatabaseInfo']();
+}
+
+export function GetDatabaseList() {
+  return window['go']['main']['App']['GetDatabaseList']();
 }
 
 export function GetHobbies() {
@@ -212,6 +228,10 @@ export function StopAIActivity() {
 
 export function StopWebServer() {
   return window['go']['main']['App']['StopWebServer']();
+}
+
+export function SwitchDatabase(arg1) {
+  return window['go']['main']['App']['SwitchDatabase'](arg1);
 }
 
 export function TestLLMConnection(arg1, arg2, arg3) {

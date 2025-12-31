@@ -95,7 +95,21 @@ func (a *App) startup(ctx context.Context) {
 		execPath, _ = os.Getwd()
 	}
 	execDir := filepath.Dir(execPath)
-	dbPath := filepath.Join(execDir, "aibbs.db")
+
+	// 마지막 사용 DB 로드 (없으면 default.db 사용)
+	lastDBFile := filepath.Join(execDir, "last_db.txt")
+	dbName := "default.db"
+	if data, err := os.ReadFile(lastDBFile); err == nil {
+		savedName := strings.TrimSpace(string(data))
+		if savedName != "" {
+			// 파일이 실제로 존재하는지 확인
+			if _, err := os.Stat(filepath.Join(execDir, savedName)); err == nil {
+				dbName = savedName
+			}
+		}
+	}
+
+	dbPath := filepath.Join(execDir, dbName)
 
 	// Database 초기화
 	a.db = database.GetInstance()
@@ -1135,4 +1149,139 @@ func (a *App) BatchDeleteCharacters(ids []int) error {
 		strings.Join(placeholders, ","))
 	_, err := db.Exec(query, args...)
 	return err
+}
+
+// ================================
+// 다중 데이터베이스 관리
+// ================================
+
+// GetDatabaseList DB 파일 목록 반환
+func (a *App) GetDatabaseList() []string {
+	list, err := a.db.ListDatabases()
+	if err != nil {
+		log.Printf("DB 목록 조회 실패: %v", err)
+		return []string{}
+	}
+	return list
+}
+
+// GetCurrentDatabase 현재 DB 이름 반환
+func (a *App) GetCurrentDatabase() string {
+	return a.db.GetCurrentDBName()
+}
+
+// SwitchDatabase 다른 DB로 전환
+func (a *App) SwitchDatabase(name string) error {
+	// AI 활동 중지
+	if a.activityManager != nil {
+		a.activityManager.Stop()
+	}
+
+	// 웹 서버 중지
+	if a.webServer != nil {
+		a.webServer.Stop()
+	}
+
+	// DB 전환
+	if err := a.db.SwitchDatabase(name); err != nil {
+		return err
+	}
+
+	// 마이그레이션 실행
+	a.db.Migrate()
+
+	// 마지막 사용 DB 저장
+	execPath, _ := os.Executable()
+	execDir := filepath.Dir(execPath)
+	lastDBFile := filepath.Join(execDir, "last_db.txt")
+	os.WriteFile(lastDBFile, []byte(name), 0644)
+
+	// 서비스 재초기화 (DB 인스턴스는 동일하므로 재생성 불필요)
+	// 단, 캐시된 데이터가 있다면 초기화 필요
+	log.Printf("데이터베이스 전환됨: %s", name)
+
+	return nil
+}
+
+// CreateNewDatabase 새 DB 생성
+func (a *App) CreateNewDatabase(name string) error {
+	// 확장자 추가
+	if !strings.HasSuffix(name, ".db") {
+		name = name + ".db"
+	}
+
+	// AI 활동 중지
+	if a.activityManager != nil {
+		a.activityManager.Stop()
+	}
+
+	// 웹 서버 중지
+	if a.webServer != nil {
+		a.webServer.Stop()
+	}
+
+	// 새 DB 생성
+	if err := a.db.CreateNewDatabase(name, schemaSQL); err != nil {
+		return err
+	}
+
+	// 마지막 사용 DB 저장
+	execPath, _ := os.Executable()
+	execDir := filepath.Dir(execPath)
+	lastDBFile := filepath.Join(execDir, "last_db.txt")
+	os.WriteFile(lastDBFile, []byte(name), 0644)
+
+	// 프롬프트 테이블 초기화
+	a.initPromptTables()
+
+	log.Printf("새 데이터베이스 생성됨: %s", name)
+	return nil
+}
+
+// GetDatabaseInfo 현재 DB 정보 반환
+func (a *App) GetDatabaseInfo() map[string]interface{} {
+	result := make(map[string]interface{})
+
+	db := a.db.GetDB()
+	if db == nil {
+		result["error"] = "연결 안됨"
+		return result
+	}
+
+	// 현재 DB 이름
+	result["name"] = a.db.GetCurrentDBName()
+
+	// 파일 크기
+	size, err := a.db.GetDatabaseSize()
+	if err == nil {
+		result["size"] = size
+	}
+
+	// 게시글 수
+	var postCount int
+	db.QueryRow("SELECT COUNT(*) FROM posts").Scan(&postCount)
+	result["postCount"] = postCount
+
+	// 댓글 수
+	var commentCount int
+	db.QueryRow("SELECT COUNT(*) FROM comments").Scan(&commentCount)
+	result["commentCount"] = commentCount
+
+	// 게시판 타이틀 (settings 테이블에서)
+	var title string
+	db.QueryRow("SELECT value FROM settings WHERE key_name = 'board_title'").Scan(&title)
+	if title == "" {
+		title = "DINKIssTyle AI BBS"
+	}
+	result["title"] = title
+
+	// 시스템 롤 (prompts 테이블에서)
+	var systemRole string
+	db.QueryRow("SELECT value FROM prompts WHERE key_name = 'system_role'").Scan(&systemRole)
+	if systemRole == "" {
+		systemRole = "(기본값 사용)"
+	}
+	result["systemRole"] = systemRole
+
+	return result
 }
