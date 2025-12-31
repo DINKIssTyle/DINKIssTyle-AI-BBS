@@ -128,5 +128,5 @@ wails build
 echo ""
 echo "================================"
 echo -e "${GREEN}빌드 완료!${NC}"
-echo "실행 파일: build/bin/DINKIssTyle-AI-BBS"
+echo "실행 파일: build/bin/DKST_AIBBS"
 echo "================================"

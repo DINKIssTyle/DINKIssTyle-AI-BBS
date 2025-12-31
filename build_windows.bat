@@ -90,6 +90,6 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo ================================
 echo 빌드 완료!
-echo 실행 파일: build\bin\DINKIssTyle-AI-BBS.exe
+echo 실행 파일: build\bin\DKST_AIBBS.exe
 echo ================================
 pause
