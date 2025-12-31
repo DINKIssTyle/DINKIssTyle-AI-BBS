@@ -1238,6 +1238,79 @@ func (a *App) CreateNewDatabase(name string) error {
 	return nil
 }
 
+// DeleteDatabase DB 파일 삭제 (default.db는 재생성)
+func (a *App) DeleteDatabase(confirmation string) error {
+	if confirmation != "데이터베이스 삭제" {
+		return fmt.Errorf("확인 문구가 올바르지 않습니다")
+	}
+
+	currentDB := a.db.GetCurrentDBName()
+
+	// AI 활동 중지
+	if a.activityManager != nil {
+		a.activityManager.Stop()
+	}
+
+	// 웹 서버 중지
+	if a.webServer != nil {
+		a.webServer.Stop()
+	}
+
+	execPath, _ := os.Executable()
+	execDir := filepath.Dir(execPath)
+	dbPath := filepath.Join(execDir, currentDB)
+
+	// DB 연결 해제
+	if db := a.db.GetDB(); db != nil {
+		db.Close()
+	}
+
+	// 파일 삭제
+	if err := os.Remove(dbPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("DB 파일 삭제 실패: %w", err)
+	}
+
+	log.Printf("데이터베이스 삭제됨: %s", currentDB)
+
+	// default.db인 경우 재생성, 아닌 경우 default.db로 전환
+	if currentDB == "default.db" {
+		// 재생성
+		a.db.SetDBPath(dbPath)
+		if err := a.db.Connect(); err != nil {
+			return fmt.Errorf("DB 재생성 실패: %w", err)
+		}
+		a.db.ExecuteSchema(schemaSQL)
+		a.db.Migrate()
+		a.initPromptTables()
+		log.Printf("default.db 재생성됨")
+	} else {
+		// default.db로 전환
+		defaultPath := filepath.Join(execDir, "default.db")
+		if _, err := os.Stat(defaultPath); os.IsNotExist(err) {
+			// default.db가 없으면 생성
+			a.db.SetDBPath(defaultPath)
+			if err := a.db.Connect(); err != nil {
+				return fmt.Errorf("default.db 생성 실패: %w", err)
+			}
+			a.db.ExecuteSchema(schemaSQL)
+			a.db.Migrate()
+			a.initPromptTables()
+		} else {
+			// default.db가 있으면 전환
+			if err := a.db.SwitchDatabase("default.db"); err != nil {
+				return fmt.Errorf("default.db 전환 실패: %w", err)
+			}
+			a.db.Migrate()
+		}
+
+		// last_db 업데이트
+		lastDBFile := filepath.Join(execDir, "last_db.txt")
+		os.WriteFile(lastDBFile, []byte("default.db"), 0644)
+	}
+
+	return nil
+}
+
 // GetDatabaseInfo 현재 DB 정보 반환
 func (a *App) GetDatabaseInfo() map[string]interface{} {
 	result := make(map[string]interface{})
@@ -1250,6 +1323,7 @@ func (a *App) GetDatabaseInfo() map[string]interface{} {
 
 	// 현재 DB 이름
 	result["name"] = a.db.GetCurrentDBName()
+	log.Printf("[DEBUG] GetDatabaseInfo: DB name = %s", result["name"])
 
 	// 파일 크기
 	size, err := a.db.GetDatabaseSize()
@@ -1267,21 +1341,29 @@ func (a *App) GetDatabaseInfo() map[string]interface{} {
 	db.QueryRow("SELECT COUNT(*) FROM comments").Scan(&commentCount)
 	result["commentCount"] = commentCount
 
-	// 게시판 타이틀 (settings 테이블에서)
+	// 게시판 타이틀 (settings 테이블에서 - 키는 bbs_title)
 	var title string
-	db.QueryRow("SELECT value FROM settings WHERE key_name = 'board_title'").Scan(&title)
+	err = db.QueryRow("SELECT value FROM settings WHERE key_name = 'bbs_title'").Scan(&title)
+	if err != nil {
+		log.Printf("[DEBUG] GetDatabaseInfo: bbs_title query error: %v", err)
+	}
 	if title == "" {
 		title = "DINKIssTyle AI BBS"
 	}
 	result["title"] = title
+	log.Printf("[DEBUG] GetDatabaseInfo: title = %s", title)
 
-	// 시스템 롤 (prompts 테이블에서)
+	// 시스템 롤 (prompts 테이블에서 - 컬럼명은 content)
 	var systemRole string
-	db.QueryRow("SELECT value FROM prompts WHERE key_name = 'system_role'").Scan(&systemRole)
+	err = db.QueryRow("SELECT content FROM prompts WHERE key_name = 'system_role'").Scan(&systemRole)
+	if err != nil {
+		log.Printf("[DEBUG] GetDatabaseInfo: system_role query error: %v", err)
+	}
 	if systemRole == "" {
 		systemRole = "(기본값 사용)"
 	}
 	result["systemRole"] = systemRole
+	log.Printf("[DEBUG] GetDatabaseInfo: systemRole = %s", systemRole)
 
 	return result
 }

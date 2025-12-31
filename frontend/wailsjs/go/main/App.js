@@ -42,6 +42,10 @@ export function DeleteComment(arg1) {
   return window['go']['main']['App']['DeleteComment'](arg1);
 }
 
+export function DeleteDatabase(arg1) {
+  return window['go']['main']['App']['DeleteDatabase'](arg1);
+}
+
 export function DeletePost(arg1) {
   return window['go']['main']['App']['DeletePost'](arg1);
 }

@@ -193,6 +193,9 @@ function initEventListeners() {
     $('#btn-cancel-reset').addEventListener('click', () => hideModal('confirm-modal'));
     $('#btn-create-db')?.addEventListener('click', createNewDatabase);
     $('#db-select')?.addEventListener('change', switchDatabase);
+    $('#btn-delete-db')?.addEventListener('click', () => showModal('delete-modal'));
+    $('#btn-confirm-delete')?.addEventListener('click', deleteDatabase);
+    $('#btn-cancel-delete')?.addEventListener('click', () => hideModal('delete-modal'));
 
     // LLM 관리
     $('#btn-test-llm').addEventListener('click', testLLMConnection);
@@ -513,6 +516,13 @@ async function loadDatabaseInfo() {
         if ($('#db-info-posts')) $('#db-info-posts').textContent = info.postCount || 0;
         if ($('#db-info-comments')) $('#db-info-comments').textContent = info.commentCount || 0;
         if ($('#db-info-size')) $('#db-info-size').textContent = formatFileSize(info.size || 0);
+
+        // 헤더에 현재 DB 정보 표시
+        if ($('#header-db-info')) {
+            const title = info.title || 'DINKIssTyle AI BBS';
+            const dbName = info.name || 'default.db';
+            $('#header-db-info').textContent = `${title} - ${dbName}`;
+        }
     } catch (e) {
         console.log('DB 정보 로드 실패:', e);
     }
@@ -547,9 +557,18 @@ async function switchDatabase() {
     try {
         await go.SwitchDatabase(name);
         showToast(`"${name}"로 전환되었습니다`);
+
+        // 웹서버/AI 상태 인디케이터 업데이트 (정지됨)
+        updateWebStatus(false);
+        updateAIStatus(false);
+
         loadDatabaseInfo();
         loadDatabaseList();
-        checkDBStatus();
+
+        // 웹서버 재시작 확인
+        if (confirm('웹 서버를 다시 시작하시겠습니까?')) {
+            await startWebServer();
+        }
     } catch (e) {
         showToast('DB 전환 실패: ' + e, 'error');
         loadDatabaseList();
@@ -587,9 +606,28 @@ async function resetDatabase() {
         $('#confirm-input').value = '';
         loadUsers();
         loadDatabaseInfo();
+        loadDatabaseList();
         const chars = await go.GetAllCharacters();
         renderCharacters(chars);
     } catch (e) { showToast('초기화 실패: ' + e, 'error'); }
+}
+
+async function deleteDatabase() {
+    const confirmation = $('#delete-confirm-input').value;
+    try {
+        await go.DeleteDatabase(confirmation);
+        showToast('데이터베이스가 삭제되었습니다');
+        hideModal('delete-modal');
+        $('#delete-confirm-input').value = '';
+
+        // 상태 업데이트
+        updateWebStatus(false);
+        updateAIStatus(false);
+
+        loadDatabaseList();
+        loadDatabaseInfo();
+        loadUsers();
+    } catch (e) { showToast('삭제 실패: ' + e, 'error'); }
 }
 
 function updateAIStatus(running) {

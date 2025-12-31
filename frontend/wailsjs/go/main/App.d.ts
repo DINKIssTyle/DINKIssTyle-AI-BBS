@@ -23,6 +23,8 @@ export function DeleteCharacter(arg1:number):Promise<void>;
 
 export function DeleteComment(arg1:number):Promise<void>;
 
+export function DeleteDatabase(arg1:string):Promise<void>;
+
 export function DeletePost(arg1:number):Promise<void>;
 
 export function GenerateCharacters(arg1:number):Promise<Array<models.AICharacter>>;

@@ -79,7 +79,10 @@
     <div id="app">
         <!-- 헤더 (간소화됨) -->
         <header id="header">
-            <div class="header-title">DINKIssTyle AI BBS Manager</div>
+            <div style="display: flex; flex-direction: column;">
+                <div class="header-title">DINKIssTyle AI BBS Manager</div>
+                <div id="header-db-info" style="font-size: 12px; color: #888; margin-top: 2px;">-</div>
+            </div>
             <div class="header-status">
                 <div class="status-indicator">
                     <span class="status-dot status-off" id="header-web-dot"></span>
@@ -497,10 +500,11 @@
                         <h4>데이터베이스 관리</h4>
                         <div class="button-group">
                             <button id="btn-create-db" class="btn-primary">새 데이터베이스 생성</button>
-                            <button id="btn-reset-db" class="btn-danger">초기화</button>
+                            <button id="btn-reset-db" class="btn-warning">초기화</button>
+                            <button id="btn-delete-db" class="btn-danger">삭제</button>
                         </div>
-                        <p style="color: #888; font-size: 12px; margin-top: 10px;">※ 초기화 시 선택된 데이터베이스의 모든 데이터가 삭제됩니다.
-                        </p>
+                        <p style="color: #888; font-size: 12px; margin-top: 10px;">※ 초기화: 데이터만 삭제 / 삭제: 파일 완전 삭제
+                            (default.db는 재생성)</p>
                     </div>
 
                     <!-- 게시판 설정 탭 -->
@@ -700,16 +704,30 @@
         </div>
     </div>
 
-    <!-- 확인 모달 -->
+    <!-- 초기화 확인 모달 -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
             <h2>데이터베이스 초기화</h2>
             <p>정말로 초기화하시겠습니까? 모든 데이터가 삭제됩니다.</p>
-            <p>확인하려면 "데이터삭제"를 입력하세요:</p>
+            <p>확인하려면 "데이터베이스 초기화"를 입력하세요:</p>
             <input type="text" id="confirm-input" class="form-input" />
             <div class="button-group">
                 <button id="btn-confirm-reset" class="btn-danger">초기화</button>
                 <button id="btn-cancel-reset" class="btn-secondary">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 삭제 확인 모달 -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <h2>데이터베이스 삭제</h2>
+            <p id="delete-modal-desc">정말로 삭제하시겠습니까? 파일이 완전히 삭제됩니다.</p>
+            <p>확인하려면 "데이터베이스 삭제"를 입력하세요:</p>
+            <input type="text" id="delete-confirm-input" class="form-input" />
+            <div class="button-group">
+                <button id="btn-confirm-delete" class="btn-danger">삭제</button>
+                <button id="btn-cancel-delete" class="btn-secondary">취소</button>
             </div>
         </div>
     </div>
