@@ -636,9 +636,10 @@ func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recen
 		return "", err
 	}
 
-	// 1000자 제한
-	if len(response) > 1000 {
-		response = response[:1000]
+	// 2000자 제한 (바이트가 아닌 실제 문자 수 기준)
+	runes := []rune(response)
+	if len(runes) > 2000 {
+		response = string(runes[:2000])
 	}
 
 	return strings.TrimSpace(response), nil
