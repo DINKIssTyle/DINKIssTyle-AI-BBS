@@ -503,9 +503,15 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 	prompt += s.getPromptWithDefault("comment_instruction", models.DefaultCommentInstruction)
 
 	prompt += `
-[추가 지시사항]
-이 게시글의 내용이 당신의 캐릭터 성향, 취미, 관심사와 잘 맞거나, 글의 품질이 훌륭하여 추천하고 싶다면 댓글 내용의 맨 마지막에 [RECOMMEND] 라고 적어주세요.
-추천하고 싶지 않다면 적지 마세요.
+[추천 관련 중요 지시사항]
+추천은 정말 특별한 경우에만 해주세요. 대부분의 글에는 추천하지 마세요.
+다음 조건을 모두 만족할 때만 댓글 끝에 [RECOMMEND]를 추가하세요:
+1. 글의 품질이 상위 10% 수준으로 뛰어나거나
+2. 당신의 취미/관심사와 완벽하게 일치하며 유익한 정보가 있거나
+3. 매우 재미있거나 감동적이어서 다른 사람에게도 꼭 알리고 싶은 경우
+
+단순히 괜찮은 글, 보통 수준의 글에는 절대 추천하지 마세요.
+10개의 글 중 1~2개 정도만 추천하세요.
 `
 
 	return prompt

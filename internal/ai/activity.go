@@ -368,13 +368,18 @@ func (m *ActivityManager) createRandomComment() {
 
 	log.Printf("AI 댓글 작성: [%s] on [%s]\n", character.Nickname, post.Title)
 
-	// 추천 처리
+	// 추천 처리 (30% 확률로만 실제 추천 실행)
 	if recommend {
-		err := m.postService.RecommendPostByUser("ai", character.ID, post.ID)
-		if err != nil {
-			log.Printf("AI 추천 실패: %v\n", err)
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		if rng.Float64() < 0.30 { // 30% 확률
+			err := m.postService.RecommendPostByUser("ai", character.ID, post.ID)
+			if err != nil {
+				log.Printf("AI 추천 실패: %v\n", err)
+			} else {
+				log.Printf("AI 추천: [%s] -> [%s]\n", character.Nickname, post.Title)
+			}
 		} else {
-			log.Printf("AI 추천: [%s] -> [%s]\n", character.Nickname, post.Title)
+			log.Printf("AI 추천 의도 있으나 확률로 스킵: [%s] -> [%s]\n", character.Nickname, post.Title)
 		}
 	}
 
