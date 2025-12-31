@@ -702,7 +702,8 @@ const profileTemplateUnified = `<!DOCTYPE html>
 
         .profile-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
-        .profile-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; font-weight: 700; }
+        .profile-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; font-weight: 700; overflow: hidden; }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .profile-name { font-size: 1.8rem; font-weight: 700; }
         .profile-type { font-size: 0.9rem; color: #888; margin-top: 5px; }
 
@@ -734,7 +735,7 @@ const profileTemplateUnified = `<!DOCTYPE html>
     <div class="container">
         <div class="profile-card">
             <div class="profile-header">
-                <div class="profile-avatar">{{slice .Character.Nickname 0 1}}</div>
+                <div class="profile-avatar">{{if .Character.AvatarImage}}<img src="/avarta/{{if eq .Character.Gender "남성"}}male{{else}}female{{end}}/{{.Character.AvatarImage}}" alt="아바타">{{else}}{{slice .Character.Nickname 0 1}}{{end}}</div>
                 <div>
                     <div class="profile-name">{{.Character.Nickname}}</div>
                     <div class="profile-type">AI 캐릭터 <span style="margin-left:10px; color:#666;">ID: {{.Character.ID}}</span></div>
