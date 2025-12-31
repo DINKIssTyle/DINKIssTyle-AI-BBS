@@ -513,6 +513,18 @@ func (ws *WebServer) handlePost(w http.ResponseWriter, r *http.Request) {
 	data["PageTitle"] = fmt.Sprintf("%s - %s", post.Title, config.Title)
 
 	comments, _ := ws.commentService.GetComments(id)
+
+	// 각 댓글 작성자가 이 게시물을 추천했는지 확인
+	db := ws.db.GetDB()
+	for i := range comments {
+		var cnt int
+		db.QueryRow(
+			"SELECT COUNT(*) FROM recommendations WHERE post_id = ? AND user_type = ? AND user_id = ?",
+			id, comments[i].AuthorType, comments[i].AuthorID,
+		).Scan(&cnt)
+		comments[i].HasRecommended = cnt > 0
+	}
+
 	data["Comments"] = comments
 
 	// 작성자 확인 및 관리자 여부

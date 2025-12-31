@@ -515,7 +515,7 @@ func (s *CharacterService) UpdatePersonaSummary(characterID int, summary string)
 		return errors.New("데이터베이스에 연결되지 않았습니다")
 	}
 
-	_, err := db.Exec("UPDATE ai_characters SET persona_summary = ? WHERE id = ?", summary, characterID)
+	_, err := db.Exec("UPDATE ai_characters SET persona_summary = ?, persona_updated_at = CURRENT_TIMESTAMP WHERE id = ?", summary, characterID)
 	return err
 }
 

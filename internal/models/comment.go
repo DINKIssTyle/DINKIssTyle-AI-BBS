@@ -15,6 +15,7 @@ type Comment struct {
 	Content        string     `json:"content"`
 	CreatedAt      time.Time  `json:"created_at"`
 	Replies        []*Comment `json:"replies,omitempty"` // 대댓글 목록
+	HasRecommended bool       `json:"has_recommended"`   // 이 작성자가 게시물을 추천했는지
 }
 
 // CommentCreate 댓글 생성 요청

@@ -109,6 +109,7 @@ export namespace models {
 	    // Go type: time
 	    created_at: any;
 	    replies?: Comment[];
+	    has_recommended: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Comment(source);
@@ -125,6 +126,7 @@ export namespace models {
 	        this.content = source["content"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.replies = this.convertValues(source["replies"], Comment);
+	        this.has_recommended = source["has_recommended"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

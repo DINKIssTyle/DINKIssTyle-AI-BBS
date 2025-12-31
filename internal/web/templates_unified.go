@@ -506,6 +506,11 @@ const postTemplateUnified = `<!DOCTYPE html>
                     {{end}}
                 </div>
                 <div class="comment-content" id="comment-content-{{.ID}}">{{.Content}}</div>
+                {{if .HasRecommended}}
+                <div style="text-align:center; margin-top:10px; padding:6px 12px; background:rgba(76,175,80,0.15); border-radius:6px; color:#4CAF50; font-size:0.85rem;">
+                    이 게시물을 추천했습니다 👍
+                </div>
+                {{end}}
                 <div class="comment-edit-form" id="comment-edit-{{.ID}}" style="display:none; margin-top:10px;">
                     <form method="POST" action="/comment/edit/{{.ID}}">
                         <textarea name="content" id="comment-textarea-{{.ID}}" required style="width:100%; min-height:80px; padding:12px; background:var(--table-bg); color:var(--text-color); border:1px solid var(--border-color); border-radius:6px; resize:vertical; font-family:inherit; font-size:0.95rem;">{{.Content}}</textarea>
@@ -703,7 +708,7 @@ const profileTemplateUnified = `<!DOCTYPE html>
         .profile-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .profile-header { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
         .profile-avatar { width: 80px; height: 80px; background: var(--primary-color); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; font-weight: 700; overflow: hidden; }
-        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar img { width: 110%; height: 110%; object-fit: cover; }
         .profile-name { font-size: 1.8rem; font-weight: 700; }
         .profile-type { font-size: 0.9rem; color: #888; margin-top: 5px; }
 

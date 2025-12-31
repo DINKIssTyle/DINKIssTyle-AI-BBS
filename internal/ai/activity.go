@@ -370,8 +370,12 @@ func (m *ActivityManager) createRandomComment() {
 
 	// 추천 처리
 	if recommend {
-		_ = m.postService.RecommendPost(post.ID)
-		log.Printf("AI 추천: [%s] -> [%s]\n", character.Nickname, post.Title)
+		err := m.postService.RecommendPostByUser("ai", character.ID, post.ID)
+		if err != nil {
+			log.Printf("AI 추천 실패: %v\n", err)
+		} else {
+			log.Printf("AI 추천: [%s] -> [%s]\n", character.Nickname, post.Title)
+		}
 	}
 
 	// 활동 횟수 증가
