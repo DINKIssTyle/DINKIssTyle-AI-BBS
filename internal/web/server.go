@@ -566,9 +566,11 @@ func (ws *WebServer) handleWrite(w http.ResponseWriter, r *http.Request) {
 		if title != "" && content != "" {
 			post, err := ws.postService.CreatePostByAuthor("user", user.ID, title, content, isPinned)
 			if err == nil {
+				log.Printf("[DEBUG] HandleWrite: Created post %d (pinned=%v)\n", post.ID, isPinned)
 				http.Redirect(w, r, fmt.Sprintf("/post/%d", post.ID), http.StatusFound) // 302
 				return
 			}
+			log.Printf("[DEBUG] HandleWrite: Create failed: %v\n", err)
 			errMsg = "게시물 작성 실패: " + err.Error()
 		} else {
 			errMsg = "제목과 내용을 모두 입력해주세요."

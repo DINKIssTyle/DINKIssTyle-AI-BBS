@@ -84,7 +84,8 @@ const boardTemplateUnified = `<!DOCTYPE html>
             border-radius: 4px; z-index: 100; padding: 5px 0;
         }
         .nickname-container:hover { z-index: 200; }
-        .nickname-container:hover .nickname-dropdown { display: block; }
+        .nickname-container:hover .nickname-dropdown,
+        .nickname-container.active .nickname-dropdown { display: block; }
         .dropdown-item { 
             padding: 8px 15px; text-decoration: none; display: block; 
             color: var(--text-color); font-size: 0.9rem; text-align: left;
@@ -264,6 +265,23 @@ const boardTemplateUnified = `<!DOCTYPE html>
     <script>
         // Console Toggle Logic
         document.addEventListener('DOMContentLoaded', function() {
+            // Mobile Nickname Dropdown
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.nickname-container')) {
+                    document.querySelectorAll('.nickname-container').forEach(function(el) {
+                        el.classList.remove('active');
+                    });
+                    return;
+                }
+                const container = e.target.closest('.nickname-container');
+                if (container) {
+                    document.querySelectorAll('.nickname-container').forEach(function(el) {
+                        if (el !== container) el.classList.remove('active');
+                    });
+                    container.classList.toggle('active');
+                }
+            });
+
             const btnConsole = document.getElementById('btn-console-toggle');
             const logViewer = document.getElementById('header-log-viewer');
             
@@ -614,7 +632,7 @@ const writeTemplateUnified = `<!DOCTYPE html>
         <div class="write-card">
             <div class="write-title">{{if .Post}}글 수정{{else}}새 글 작성{{end}}</div>
             
-            <form method="POST" action="{{if .Post}}/edit/{{.Post.ID}}{{else}}/write{{end}}">
+            <form method="POST" action="{{if .Post}}/post/edit/{{.Post.ID}}{{else}}/write{{end}}">
                 <div class="form-group">
                     <input type="text" name="title" placeholder="제목을 입력하세요" value="{{if .Post}}{{.Post.Title}}{{end}}" required>
                 </div>

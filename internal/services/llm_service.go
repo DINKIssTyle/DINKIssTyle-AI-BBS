@@ -209,17 +209,24 @@ func (s *LLMService) GeneratePostContent(character *models.AICharacter, recentPo
 	return &postContent, nil
 }
 
-// GenerateCommentContent AI 캐릭터로 댓글 내용 생성
-func (s *LLMService) GenerateCommentContent(character *models.AICharacter, post *models.Post, existingComments []*models.Comment, pinnedPosts []models.Post) (string, error) {
+// GenerateCommentContent AI 캐릭터로 댓글 내용 생성 (추천 여부 포함)
+func (s *LLMService) GenerateCommentContent(character *models.AICharacter, post *models.Post, existingComments []*models.Comment, pinnedPosts []models.Post) (string, bool, error) {
 	prompt := s.buildCommentPrompt(character, post, existingComments, pinnedPosts)
 	modelName := s.selectModel(character.AssignedModelIndex)
 
 	response, err := s.sendRequest(prompt, modelName)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	return response, nil
+	// 추천 여부 파싱
+	recommend := false
+	if strings.Contains(response, "[RECOMMEND]") {
+		recommend = true
+		response = strings.ReplaceAll(response, "[RECOMMEND]", "")
+	}
+
+	return strings.TrimSpace(response), recommend, nil
 }
 
 // GenerateReplyContent AI 캐릭터가 본인 글에 달린 댓글에 답글 생성
@@ -481,6 +488,12 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 	}
 
 	prompt += s.getPromptWithDefault("comment_instruction", models.DefaultCommentInstruction)
+
+	prompt += `
+[추가 지시사항]
+이 게시글의 내용이 당신의 캐릭터 성향, 취미, 관심사와 잘 맞거나, 글의 품질이 훌륭하여 추천하고 싶다면 댓글 내용의 맨 마지막에 [RECOMMEND] 라고 적어주세요.
+추천하고 싶지 않다면 적지 마세요.
+`
 
 	return prompt
 }

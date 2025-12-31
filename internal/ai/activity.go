@@ -333,6 +333,9 @@ func (m *ActivityManager) createRandomComment() {
 		return
 	}
 
+	// AI가 글을 읽었으므로 조회수 증가
+	_ = m.postService.IncrementViewCount(post.ID)
+
 	// 글 제목에 가장 어울리는 캐릭터 선택
 	character, err := m.selectBestCharacterForPost(post)
 	if err != nil {
@@ -350,7 +353,7 @@ func (m *ActivityManager) createRandomComment() {
 	pinnedPosts, _ := m.postService.GetPinnedPosts()
 
 	// LLM으로 댓글 내용 생성
-	commentContent, err := m.llmService.GenerateCommentContent(character, post, existingComments, pinnedPosts)
+	commentContent, recommend, err := m.llmService.GenerateCommentContent(character, post, existingComments, pinnedPosts)
 	if err != nil {
 		log.Printf("댓글 생성 실패: %v\n", err)
 		return
@@ -364,6 +367,12 @@ func (m *ActivityManager) createRandomComment() {
 	}
 
 	log.Printf("AI 댓글 작성: [%s] on [%s]\n", character.Nickname, post.Title)
+
+	// 추천 처리
+	if recommend {
+		_ = m.postService.RecommendPost(post.ID)
+		log.Printf("AI 추천: [%s] -> [%s]\n", character.Nickname, post.Title)
+	}
 
 	// 활동 횟수 증가
 	_ = m.characterService.IncrementCommentCount(character.ID)

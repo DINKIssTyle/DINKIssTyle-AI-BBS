@@ -175,6 +175,37 @@ func (d *Database) Migrate() error {
 		fmt.Println("[DEBUG] ai_characters 테이블에 persona_updated_at 컬럼을 추가했습니다.")
 	}
 
+	// posts 테이블에 is_pinned 컬럼이 없으면 추가
+	rows, err = d.db.Query("PRAGMA table_info(posts)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasIsPinned := false
+	for rows.Next() {
+		var cid int
+		var name, dtype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "is_pinned" {
+			hasIsPinned = true
+			break
+		}
+	}
+
+	if !hasIsPinned {
+		_, err := d.db.Exec("ALTER TABLE posts ADD COLUMN is_pinned INTEGER DEFAULT 0")
+		if err != nil {
+			return fmt.Errorf("posts 마이그레이션 실패 (is_pinned): %w", err)
+		}
+		fmt.Println("[DEBUG] posts 테이블에 is_pinned 컬럼을 추가했습니다.")
+	}
+
 	return nil
 }
 
