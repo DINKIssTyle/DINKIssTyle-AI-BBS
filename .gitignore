@@ -1,3 +1,18 @@
-build/bin
-node_modules
-frontend/dist
+bin/
+node_modules/
+frontend/dist/
+frontend/wailsjs/
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# App Data
+last_db.txt
+debug.log
+data_*.txt
+
+# OS specific
+.DS_Store
+Thumbs.db
