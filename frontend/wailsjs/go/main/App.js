@@ -50,6 +50,14 @@ export function DeletePost(arg1) {
   return window['go']['main']['App']['DeletePost'](arg1);
 }
 
+export function ExportPromptSettings() {
+  return window['go']['main']['App']['ExportPromptSettings']();
+}
+
+export function ExportReferenceValues() {
+  return window['go']['main']['App']['ExportReferenceValues']();
+}
+
 export function GenerateCharacters(arg1) {
   return window['go']['main']['App']['GenerateCharacters'](arg1);
 }
@@ -140,6 +148,14 @@ export function GetPrompt(arg1) {
 
 export function GetWebServerConfig() {
   return window['go']['main']['App']['GetWebServerConfig']();
+}
+
+export function ImportPromptSettings() {
+  return window['go']['main']['App']['ImportPromptSettings']();
+}
+
+export function ImportReferenceValues() {
+  return window['go']['main']['App']['ImportReferenceValues']();
 }
 
 export function IsAIActivityRunning() {

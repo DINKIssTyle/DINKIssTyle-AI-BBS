@@ -5,21 +5,105 @@ package services
 import (
 	"aibbs/internal/database"
 	"aibbs/internal/models"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"math"
+	"sync"
+	"time"
 )
 
 // PostService 게시물 서비스
 type PostService struct {
 	db          *database.Database
 	userService *UserService
+
+	// 조회수 배치 처리를 위한 버퍼
+	viewBufferMu sync.RWMutex
+	viewBuffer   map[int]int
+	ctx          context.Context
 }
 
 // NewPostService 새 게시물 서비스 생성
 func NewPostService(db *database.Database, userService *UserService) *PostService {
-	return &PostService{db: db, userService: userService}
+	s := &PostService{
+		db:          db,
+		userService: userService,
+		viewBuffer:  make(map[int]int),
+	}
+	return s
+}
+
+// StartViewCountFlusher 조회수 플러시 고루틴 시작 (App startup에서 호출)
+func (s *PostService) StartViewCountFlusher(ctx context.Context) {
+	s.ctx = ctx
+	go func() {
+		ticker := time.NewTicker(10 * time.Second) // 10초마다 DB 반영
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				s.FlushViewCounts() // 종료 시 남은 것 처리
+				return
+			case <-ticker.C:
+				s.FlushViewCounts()
+			}
+		}
+	}()
+}
+
+// FlushViewCounts 버퍼된 조회수를 DB에 반영
+func (s *PostService) FlushViewCounts() {
+	s.viewBufferMu.Lock()
+	if len(s.viewBuffer) == 0 {
+		s.viewBufferMu.Unlock()
+		return
+	}
+
+	// 버퍼 교체 (Copy-on-write 유사)
+	currentBuffer := s.viewBuffer
+	s.viewBuffer = make(map[int]int)
+	s.viewBufferMu.Unlock()
+
+	db := s.db.GetDB()
+	if db == nil {
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		fmt.Printf("[ERROR] 조회수 플러시 트랜잭션 에러: %v\n", err)
+		return
+	}
+
+	stmt, err := tx.Prepare("UPDATE posts SET view_count = view_count + ? WHERE id = ?")
+	if err != nil {
+		tx.Rollback()
+		return
+	}
+	defer stmt.Close()
+
+	for postID, count := range currentBuffer {
+		if _, err := stmt.Exec(count, postID); err != nil {
+			fmt.Printf("[ERROR] 조회수 업데이트 에러 (ID: %d): %v\n", postID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		fmt.Printf("[ERROR] 조회수 플러시 커밋 에러: %v\n", err)
+	} else {
+		// fmt.Printf("[DEBUG] 조회수 플러시 완료 (%d건)\n", len(currentBuffer))
+	}
+}
+
+// IncrementViewCount 게시물 조회수 증가 (메모리 버퍼링)
+func (s *PostService) IncrementViewCount(postID int) error {
+	s.viewBufferMu.Lock()
+	s.viewBuffer[postID]++
+	s.viewBufferMu.Unlock()
+	return nil
 }
 
 // GetPosts 게시물 목록 조회 (검색 지원)
@@ -114,6 +198,15 @@ func (s *PostService) GetPosts(page, perPage int, searchType, keyword string) (*
 		posts = append(posts, p)
 	}
 
+	// 버퍼에 있는 조회수 합산 (최신 상태 반영)
+	s.viewBufferMu.RLock()
+	for i := range posts {
+		if count, ok := s.viewBuffer[posts[i].ID]; ok {
+			posts[i].ViewCount += count
+		}
+	}
+	s.viewBufferMu.RUnlock()
+
 	return &models.PostList{
 		Posts:      posts,
 		TotalCount: totalCount,
@@ -157,6 +250,13 @@ func (s *PostService) GetPost(id int) (*models.Post, error) {
 	if authorNickname.Valid {
 		p.AuthorNickname = authorNickname.String
 	}
+
+	// 버퍼에 있는 조회수 합산
+	s.viewBufferMu.RLock()
+	if count, ok := s.viewBuffer[id]; ok {
+		p.ViewCount += count
+	}
+	s.viewBufferMu.RUnlock()
 
 	return p, nil
 }
@@ -465,15 +565,4 @@ func (s *PostService) GetPinnedPosts() ([]models.Post, error) {
 	}
 
 	return posts, nil
-}
-
-// IncrementViewCount 게시물 조회수 증가
-func (s *PostService) IncrementViewCount(postID int) error {
-	db := s.db.GetDB()
-	if db == nil {
-		return errors.New("데이터베이스에 연결되지 않았습니다")
-	}
-
-	_, err := db.Exec("UPDATE posts SET view_count = view_count + 1 WHERE id = ?", postID)
-	return err
 }

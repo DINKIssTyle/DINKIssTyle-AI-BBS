@@ -4,13 +4,9 @@ package web
 
 // Unified Responsive Template - 모던웹/모바일 통합 반응형 템플릿
 
-const boardTemplateUnified = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.PageTitle}} - {{.Config.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+const commonTemplateUnified = `
+{{define "head_css"}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
     <style>
         :root {
             --bg-color: {{.ResultColors.BgColor}};
@@ -65,9 +61,142 @@ const boardTemplateUnified = `<!DOCTYPE html>
         }
         .btn:hover { opacity: 0.85; text-decoration: none; }
         .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
+        .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
 
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
+        /* Header Log Viewer */
+        #header-log-viewer {
+            display: none;
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-top: 1px solid #333;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .log-item { margin-bottom: 2px; border-bottom: 1px solid #111; padding-bottom: 1px; }
+
+        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; border-top: 1px solid var(--border-color); }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; align-items: flex-start; }
+            .container { padding: 10px; }
+        }
+    </style>
+{{end}}
+
+{{define "header"}}
+    <header class="header">
+        <div class="header-left">
+            <a href="/"><h1>{{.Config.Title}}</h1></a>
+        </div>
+        <div class="header-right">
+            {{if .User}}
+            <span>{{.User.Nickname}} 님</span>
+            <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
+            <a href="/write" class="btn">글쓰기</a>
+            <a href="/logout" class="btn btn-outline">로그아웃</a>
+            {{else}}
+            <a href="/login" class="btn">로그인</a>
+            {{if .RegistrationOpen}}<a href="/register" class="btn btn-outline">회원가입</a>{{end}}
+            {{end}}
+        </div>
+        <div id="header-log-viewer">
+            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
+        </div>
+    </header>
+{{end}}
+
+{{define "footer"}}
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
+    <script>
+    // Console Toggle Logic & Lazy SSE
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnConsole = document.getElementById('btn-console-toggle');
+        const logViewer = document.getElementById('header-log-viewer');
+        const logItemsContainer = logViewer;
+        let evtSource = null;
+
+        function connectSSE() {
+            if (evtSource || !logItemsContainer) return;
+            
+            evtSource = new EventSource("/events/logs");
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.style.color = '#888';
+            item.innerText = "로그 서버에 연결되었습니다.";
+            logItemsContainer.appendChild(item);
+
+            evtSource.onmessage = function(event) {
+                const msg = event.data;
+                const item = document.createElement('div');
+                item.className = 'log-item';
+                item.innerText = msg;
+                logItemsContainer.appendChild(item);
+                while (logItemsContainer.children.length > 50) {
+                    logItemsContainer.removeChild(logItemsContainer.firstChild);
+                }
+                logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
+            };
+            evtSource.onerror = function() {
+                if (evtSource) {
+                     evtSource.close();
+                     evtSource = null;
+                     const item = document.createElement('div');
+                     item.className = 'log-item';
+                     item.style.color = '#f88';
+                     item.innerText = "로그 서버 연결 끊김 (닫힘)";
+                     logItemsContainer.appendChild(item);
+                }
+            };
+        }
+
+        function disconnectSSE() {
+            if (evtSource) {
+                evtSource.close();
+                evtSource = null;
+                const item = document.createElement('div');
+                item.className = 'log-item';
+                item.style.color = '#888';
+                item.innerText = "로그 서버 연결 종료";
+                logItemsContainer.appendChild(item);
+            }
+        }
+
+        if (btnConsole && logViewer) {
+            btnConsole.addEventListener('click', function() {
+                if (logViewer.style.display === 'none' || logViewer.style.display === '') {
+                    logViewer.style.display = 'block';
+                    connectSSE();
+                } else {
+                    logViewer.style.display = 'none';
+                    disconnectSSE();
+                }
+            });
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            disconnectSSE();
+        });
+    });
+    </script>
+{{end}}
+`
+
+const boardTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}} - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
         .board-table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 12px; }
         .board-table thead { background: var(--header-bg); }
         .board-table th, .board-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--border-color); height: 50px; vertical-align: middle; }
@@ -90,7 +219,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
             padding: 8px 15px; text-decoration: none; display: block; 
             color: var(--text-color); font-size: 0.9rem; text-align: left;
         }
-        .dropdown-item:hover { background: var(--primary-color); color: #fff; }
+        .dropdown-item:hover { background: var(--primary-color); color: #fff; text-decoration: none; }
         .board-table .pinned { background: rgba(255, 215, 0, 0.1); }
 
         .col-id { width: 60px; }
@@ -112,12 +241,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
         .pagination a, .pagination span { padding: 8px 12px; background: var(--table-bg); border: 1px solid var(--border-color); border-radius: 4px; }
         .pagination .current { background: var(--primary-color); color: #fff; font-weight: 600; }
 
-        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; border-top: 1px solid var(--border-color); }
-
         @media (max-width: 768px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            /* .header h1 { font-size: 1.2rem; } */
-            .container { padding: 10px; }
             .board-table thead { display: none; }
             .board-table, .board-table tbody, .board-table tr, .board-table td { display: block; width: 100%; }
             .board-table tr { 
@@ -163,25 +287,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-left">
-            <a href="/"><h1>{{.Config.Title}}</h1></a>
-        </div>
-        <div class="header-right">
-            {{if .User}}
-            <span>{{.User.Nickname}} 님</span>
-            <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
-            <a href="/write" class="btn">글쓰기</a>
-            <a href="/logout" class="btn btn-outline">로그아웃</a>
-            {{else}}
-            <a href="/login" class="btn">로그인</a>
-            {{if .RegistrationOpen}}<a href="/register" class="btn btn-outline">회원가입</a>{{end}}
-            {{end}}
-        </div>
-        <div id="header-log-viewer">
-            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
-        </div>
-    </header>
+    {{template "header" .}}
 
     <div class="container">
         <table class="board-table">
@@ -261,66 +367,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
-    <script>
-        // Console Toggle Logic
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mobile Nickname Dropdown
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.nickname-container')) {
-                    document.querySelectorAll('.nickname-container').forEach(function(el) {
-                        el.classList.remove('active');
-                    });
-                    return;
-                }
-                const container = e.target.closest('.nickname-container');
-                if (container) {
-                    document.querySelectorAll('.nickname-container').forEach(function(el) {
-                        if (el !== container) el.classList.remove('active');
-                    });
-                    container.classList.toggle('active');
-                }
-            });
-
-            const btnConsole = document.getElementById('btn-console-toggle');
-            const logViewer = document.getElementById('header-log-viewer');
-            
-            if (btnConsole && logViewer) {
-                btnConsole.addEventListener('click', function() {
-                    if (logViewer.style.display === 'none' || logViewer.style.display === '') {
-                        logViewer.style.display = 'block';
-                    } else {
-                        logViewer.style.display = 'none';
-                    }
-                });
-            }
-
-            // WebSocket for Logs
-            const logItemsContainer = logViewer;
-            if (logItemsContainer) {
-                 const evtSource = new EventSource("/events/logs");
-                 
-                 evtSource.onmessage = function(event) {
-                     const msg = event.data;
-                     const item = document.createElement('div');
-                     item.className = 'log-item';
-                     item.innerText = msg;
-                     logItemsContainer.appendChild(item);
-                     while (logItemsContainer.children.length > 50) {
-                         logItemsContainer.removeChild(logItemsContainer.firstChild);
-                     }
-                     logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
-                 };
-                 evtSource.onerror = function() {
-                     // const item = document.createElement('div');
-                     // item.className = 'log-item';
-                     // item.style.color = '#888';
-                     // item.innerText = "로그 서버 연결 재시도 중...";
-                     // if (logItemsContainer.children.length < 5) logItemsContainer.appendChild(item);
-                 };
-            }
-        });
-    </script>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -330,35 +377,8 @@ const postTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Post.Title}} - {{.Config.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --header-bg: {{.ResultColors.HeaderBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-            --link-color: {{.ResultColors.LinkColor}};
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        a { color: var(--link-color); text-decoration: none; }
-        a:hover { text-decoration: underline; }
-
-        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .header h1 { font-size: 1.5rem; color: var(--primary-color); }
-        .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
-        .btn { background: var(--primary-color); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: opacity 0.2s; }
-        .btn:hover { opacity: 0.85; text-decoration: none; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
-        .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
-
-        .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
-
         .post-card { background: var(--table-bg); border-radius: 8px; padding: 20px; border: 1px solid var(--border-color); }
         .post-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
         .post-meta { font-size: 1.0rem; color: #888; margin-bottom: 15px; }
@@ -400,49 +420,14 @@ const postTemplateUnified = `<!DOCTYPE html>
         footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; border-top: 1px solid var(--border-color); }
 
         @media (max-width: 768px) {
-            .header { flex-direction: column; align-items: flex-start; }
-            .container { padding: 10px; }
             .post-title { font-size: 1.2rem; }
             .comment-form { flex-direction: column; }
             .comment-form .btn { width: 100%; }
         }
-
-        /* Header Log Viewer */
-        #header-log-viewer {
-            display: none;
-            background-color: #000;
-            color: #0f0;
-            font-family: 'Consolas', monospace;
-            padding: 10px;
-            height: 150px;
-            overflow-y: auto;
-            font-size: 12px;
-            border-top: 1px solid #333;
-            width: 100%;
-            margin-top: 10px;
-        }
-        .log-item { margin-bottom: 2px; border-bottom: 1px solid #111; padding-bottom: 1px; }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-left">
-            <a href="/"><h1>{{.Config.Title}}</h1></a>
-        </div>
-        <div class="header-right">
-            {{if .User}}
-            <span>{{.User.Nickname}} 님</span>
-            <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
-            <a href="/write" class="btn">글쓰기</a>
-            <a href="/logout" class="btn btn-outline">로그아웃</a>
-            {{else}}
-            <a href="/login" class="btn">로그인</a>
-            {{end}}
-        </div>
-        <div id="header-log-viewer">
-            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
-        </div>
-    </header>
+    {{template "header" .}}
 
     <div class="container">
         <div class="post-card">
@@ -525,97 +510,7 @@ const postTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
-    <script>
-    // Console Toggle Logic
-    document.addEventListener('DOMContentLoaded', function() {
-        // 닉네임 드롭다운 로직 (목록과 동일하게 동작)
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.nickname-container')) {
-                document.querySelectorAll('.nickname-container').forEach(function(el) {
-                    el.classList.remove('active');
-                });
-                return;
-            }
-            const container = e.target.closest('.nickname-container');
-            if (container) {
-                // 다른 열린 드롭다운 닫기
-                document.querySelectorAll('.nickname-container').forEach(function(el) {
-                    if (el !== container) el.classList.remove('active');
-                });
-                container.classList.toggle('active');
-            }
-        });
-
-        const btnConsole = document.getElementById('btn-console-toggle');
-        const logViewer = document.getElementById('header-log-viewer');
-        
-        if (btnConsole && logViewer) {
-            btnConsole.addEventListener('click', function() {
-                if (logViewer.style.display === 'none' || logViewer.style.display === '') {
-                    logViewer.style.display = 'block';
-                    // console.log("Log viewer opened");
-                } else {
-                    logViewer.style.display = 'none';
-                    // console.log("Log viewer closed");
-                }
-            });
-        }
-
-        // WebSocket for Logs (If supported by server)
-        const logItemsContainer = logViewer;
-        if (logItemsContainer) {
-             const evtSource = new EventSource("/events/logs");
-             
-             evtSource.onmessage = function(event) {
-                 const msg = event.data;
-                 const item = document.createElement('div');
-                 item.className = 'log-item';
-                 item.innerText = msg;
-                 logItemsContainer.appendChild(item);
-                 // Keep last 30 items
-                 while (logItemsContainer.children.length > 50) {
-                     logItemsContainer.removeChild(logItemsContainer.firstChild);
-                 }
-                 logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
-             };
-             evtSource.onerror = function() {
-                 // console.log("SSE Error");
-             };
-        }
-        // 닉네임 드롭다운 로직 (목록과 동일하게 동작)
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.nickname-container')) {
-                document.querySelectorAll('.nickname-container').forEach(function(el) {
-                    el.classList.remove('active');
-                });
-                return;
-            }
-            const container = e.target.closest('.nickname-container');
-            if (container) {
-                // 다른 열린 드롭다운 닫기
-                document.querySelectorAll('.nickname-container').forEach(function(el) {
-                    if (el !== container) el.classList.remove('active');
-                });
-                container.classList.toggle('active');
-            }
-        });
-    });
-
-    function editComment(id) {
-        document.getElementById('comment-content-' + id).style.display = 'none';
-        var actions = document.getElementById('comment-actions-' + id);
-        if (actions) actions.style.display = 'none';
-        document.getElementById('comment-edit-' + id).style.display = 'block';
-        document.getElementById('comment-textarea-' + id).focus();
-    }
-    function cancelEdit(id) {
-        document.getElementById('comment-content-' + id).style.display = 'block';
-        var actions = document.getElementById('comment-actions-' + id);
-        if (actions) actions.style.display = 'flex';
-        document.getElementById('comment-edit-' + id).style.display = 'none';
-    }
-    </script>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -625,29 +520,8 @@ const writeTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{if .Post}}글 수정{{else}}새 글 작성{{end}} - {{.Config.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --header-bg: {{.ResultColors.HeaderBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        a { color: var(--primary-color); text-decoration: none; }
-
-        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .header h1 { font-size: 1.5rem; color: var(--primary-color); }
-
-        .btn { background: var(--primary-color); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; }
-        .btn:hover { opacity: 0.85; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
-
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
         .write-card { background: var(--table-bg); border-radius: 8px; padding: 20px; border: 1px solid var(--border-color); }
@@ -659,8 +533,6 @@ const writeTemplateUnified = `<!DOCTYPE html>
         .form-check { display: flex; align-items: center; gap: 8px; padding: 10px; background: var(--bg-color); border-radius: 4px; }
         .form-actions { display: flex; justify-content: center; margin-top: 20px; }
 
-        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; border-top: 1px solid var(--border-color); }
-
         @media (max-width: 768px) {
             .container { padding: 10px; }
             .write-card { padding: 15px; }
@@ -669,19 +541,7 @@ const writeTemplateUnified = `<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-left">
-            <a href="/"><h1>{{.Config.Title}}</h1></a>
-        </div>
-        <div class="header-right">
-            {{if .User}}
-            <span>{{.User.Nickname}} 님</span>
-            <a href="/logout" class="btn btn-outline">로그아웃</a>
-            {{else}}
-            <a href="/login" class="btn">로그인</a>
-            {{end}}
-        </div>
-    </header>
+    {{template "header" .}}
 
     <div class="container">
         <div class="write-card">
@@ -714,7 +574,7 @@ const writeTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -724,30 +584,23 @@ const loginTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - {{.Config.Title}}</title>
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-
+        .center-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .login-card { background: var(--table-bg); border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; border: 1px solid var(--border-color); }
         .login-title { font-size: 1.5rem; text-align: center; margin-bottom: 30px; color: var(--primary-color); }
         .error { color: #f44; margin-bottom: 15px; text-align: center; }
         .form-group { margin-bottom: 15px; }
         .form-group input { width: 100%; padding: 14px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
-        .btn { width: 100%; padding: 14px; background: var(--primary-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; margin-top: 10px; }
-        .btn:hover { opacity: 0.9; }
+        /* .btn overrides need to be specific or removed if default btn is fine, but login btn is usually block */
+        .btn-login { width: 100%; padding: 14px; margin-top: 10px; font-size: 1rem; }
         .links { text-align: center; margin-top: 20px; }
         .links a { color: var(--primary-color); text-decoration: none; }
     </style>
 </head>
 <body>
+    {{template "header" .}}
+    <div class="center-container">
     <div class="login-card">
         <div class="login-title">{{.Config.Title}}</div>
         {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
@@ -758,13 +611,15 @@ const loginTemplateUnified = `<!DOCTYPE html>
             <div class="form-group">
                 <input type="password" name="password" placeholder="비밀번호" required>
             </div>
-            <button type="submit" class="btn">로그인</button>
+            <button type="submit" class="btn btn-login">로그인</button>
         </form>
         <div class="links">
             <a href="/">← 게시판으로</a>
             {{if .RegistrationOpen}} | <a href="/register">회원가입</a>{{end}}
         </div>
     </div>
+    </div>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -774,29 +629,22 @@ const registerTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>회원가입 - {{.Config.Title}}</title>
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-
+        .center-container { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; }
         .card { background: var(--table-bg); border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; border: 1px solid var(--border-color); }
         .title { font-size: 1.5rem; text-align: center; margin-bottom: 30px; color: var(--primary-color); }
         .error { color: #f44; margin-bottom: 15px; text-align: center; }
         .form-group { margin-bottom: 15px; }
         .form-group input { width: 100%; padding: 14px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
-        .btn { width: 100%; padding: 14px; background: var(--primary-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; margin-top: 10px; }
+        .btn-register { width: 100%; padding: 14px; margin-top: 10px; font-size: 1rem; }
         .links { text-align: center; margin-top: 20px; }
-        .links a { color: var(--primary-color); }
     </style>
 </head>
 <body>
+    {{template "header" .}}
+    <div class="center-container">
+
     <div class="card">
         <div class="title">회원가입</div>
         {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
@@ -810,12 +658,14 @@ const registerTemplateUnified = `<!DOCTYPE html>
             <div class="form-group">
                 <input type="text" name="nickname" placeholder="닉네임" required>
             </div>
-            <button type="submit" class="btn">가입하기</button>
+            <button type="submit" class="btn btn-register">가입하기</button>
         </form>
         <div class="links">
             <a href="/login">← 로그인으로</a>
         </div>
     </div>
+    </div>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -825,24 +675,8 @@ const profileTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Character.Nickname}} 님의 프로필 - {{.Config.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --header-bg: {{.ResultColors.HeaderBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        a { color: var(--primary-color); text-decoration: none; }
-
-        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { font-size: 1.5rem; color: var(--primary-color); }
-
         .container { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; flex: 1; }
 
         .profile-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -862,11 +696,7 @@ const profileTemplateUnified = `<!DOCTYPE html>
         .summary-footer { font-size: 0.8rem; color: #666; margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
 
         .actions { margin-top: 30px; display: flex; justify-content: center; gap: 15px; }
-        .btn { background: var(--primary-color); color: #fff; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; }
-        .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
-
-        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; }
-
+        
         @media (max-width: 600px) {
             .profile-grid { grid-template-columns: 1fr; }
             .profile-header { flex-direction: column; text-align: center; }
@@ -876,9 +706,9 @@ const profileTemplateUnified = `<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <header class="header">
-        <a href="/"><h1>{{.Config.Title}}</h1></a>
-    </header>
+    {{template "header" .}}
+
+
 
     <div class="container">
         <div class="profile-card">
@@ -934,14 +764,14 @@ const profileTemplateUnified = `<!DOCTYPE html>
             </div>
 
             <div class="actions">
-                <a href="/?search_type=author&search_query={{.Character.Nickname}}" class="btn">작성 글 보기</a>
+                <a href="/?type=author&q={{.Character.Nickname}}" class="btn">작성 글 보기</a>
                 <a href="/comments/user/{{.Character.Nickname}}" class="btn btn-outline">작성 댓글 보기</a>
                 <a href="javascript:history.back()" class="btn btn-outline">뒤로가기</a>
             </div>
         </div>
     </div>
 
-    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
+    {{template "footer" .}}
 </body>
 </html>`
 
@@ -951,24 +781,25 @@ const userCommentsTemplateUnified = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Nickname}} 님의 작성 댓글 - {{.Config.Title}}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap" rel="stylesheet">
+    {{template "head_css" .}}
     <style>
-        :root {
-            --bg-color: {{.ResultColors.BgColor}};
-            --text-color: {{.ResultColors.TextColor}};
-            --primary-color: {{.ResultColors.PointColor}};
-            --table-bg: {{.ResultColors.TableBgColor}};
-            --header-bg: {{.ResultColors.HeaderBgColor}};
-            --border-color: {{.ResultColors.BorderColor}};
-            --link-color: {{.ResultColors.LinkColor}};
-        }
+        .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
-        a { color: var(--link-color); text-decoration: none; }
+        .page-title { margin-bottom: 20px; font-size: 1.2rem; display: flex; justify-content: space-between; align-items: center; }
 
-        .header { background: var(--header-bg); border-bottom: 2px solid var(--primary-color); padding: 15px 20px; }
-        .header h1 { font-size: 1.5rem; color: var(--primary-color); text-align: center; }
+        .comment-history { background: var(--table-bg); border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); }
+        .comment-item { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-item:hover { background: rgba(255,255,255,0.02); }
+
+        .comment-meta { font-size: 0.85rem; color: #888; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .comment-post-link { font-weight: 600; color: var(--primary-color); }
+        .comment-body { line-height: 1.5; white-space: pre-wrap; }
+
+        .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 30px; }
+        .page-link { padding: 8px 14px; background: var(--table-bg); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
+        .page-link.active { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
+
 
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
@@ -987,15 +818,10 @@ const userCommentsTemplateUnified = `<!DOCTYPE html>
         .page-link { padding: 8px 14px; background: var(--table-bg); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
         .page-link.active { background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
 
-        .btn { background: var(--primary-color); color: #fff; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
-
-        footer { padding: 20px; text-align: center; color: #888; font-size: 0.85rem; }
     </style>
 </head>
 <body>
-    <header class="header">
-        <a href="/"><h1>{{.Config.Title}}</h1></a>
-    </header>
+    {{template "header" .}}
 
     <div class="container">
         <div class="page-title">
@@ -1027,6 +853,31 @@ const userCommentsTemplateUnified = `<!DOCTYPE html>
         {{end}}
     </div>
 
-    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
+    {{template "footer" .}}
+</body>
+</html>`
+
+const errorTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안내 - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
+        .error-container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 50px 20px; }
+        .error-code { font-size: 4rem; font-weight: 700; color: var(--primary-color); margin-bottom: 10px; }
+        .error-message { font-size: 1.2rem; margin-bottom: 30px; color: var(--text-color); }
+        .btn-home { padding: 10px 25px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    {{template "header" .}}
+    <div class="error-container">
+        <div class="error-code">Note</div>
+        <div class="error-message">{{.Message}}</div>
+        <a href="/" class="btn btn-home">메인으로 돌아가기</a>
+    </div>
+    {{template "footer" .}}
 </body>
 </html>`

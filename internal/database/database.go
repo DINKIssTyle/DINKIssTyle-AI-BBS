@@ -209,6 +209,39 @@ func (d *Database) Migrate() error {
 	return nil
 }
 
+// ClearContent 게시물, 댓글, 추천 기록 등 콘텐츠만 삭제합니다. (설정, 유저, 캐릭터 유지)
+func (d *Database) ClearContent() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if d.db == nil {
+		return fmt.Errorf("데이터베이스에 연결되지 않았습니다")
+	}
+
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// 순서 중요 (FK 제약조건 등)
+	queries := []string{
+		"DELETE FROM recommendations",
+		"DELETE FROM comments",
+		"DELETE FROM posts",
+		"DELETE FROM sqlite_sequence WHERE name IN ('posts', 'comments', 'recommendations')",
+		"UPDATE ai_characters SET post_count = 0, comment_count = 0",
+	}
+
+	for _, query := range queries {
+		if _, err := tx.Exec(query); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("쿼리 실행 실패 (%s): %w", query, err)
+		}
+	}
+
+	return tx.Commit()
+}
+
 // ResetDatabase 데이터베이스를 초기화합니다 (파일 삭제 후 재생성).
 func (d *Database) ResetDatabase() error {
 	d.mu.Lock()

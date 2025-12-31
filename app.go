@@ -125,6 +125,7 @@ func (a *App) startup(ctx context.Context) {
 	a.characterService = services.NewCharacterService(a.db)
 	a.characterService.SetContext(ctx)
 	a.postService = services.NewPostService(a.db, a.userService)
+	a.postService.StartViewCountFlusher(ctx) // 조회수 플러시 시작
 	a.commentService = services.NewCommentService(a.db, a.userService)
 	a.llmService = services.NewLLMService()
 
@@ -428,6 +429,7 @@ func (a *App) ReconnectDatabase() error {
 }
 
 // ResetDatabase 데이터베이스 초기화
+// ResetDatabase 데이터베이스 초기화 (게시물, 댓글 등 콘텐츠만 삭제)
 func (a *App) ResetDatabase(confirmation string) error {
 	if confirmation != "데이터삭제" {
 		return fmt.Errorf("확인 문구가 일치하지 않습니다")
@@ -438,34 +440,13 @@ func (a *App) ResetDatabase(confirmation string) error {
 		a.activityManager.Stop()
 	}
 
-	// 2. 외래 키 제약 조건 일시 해제 (SQLite)
-	db := a.db.GetDB()
-	if db != nil {
-		_, _ = db.Exec("PRAGMA foreign_keys = OFF")
-	}
-
-	// 3. DB 초기화 실행
-	if err := a.db.ResetDatabase(); err != nil {
+	// 2. 콘텐츠 데이터 삭제 (유저, 캐릭터, 설정 유지)
+	if err := a.db.ClearContent(); err != nil {
 		return err
 	}
 
-	// 4. 스키마 재생성
-	if err := a.db.ExecuteSchema(schemaSQL); err != nil {
-		return err
-	}
-
-	// 5. 외래 키 제약 조건 다시 활성화
-	if db != nil {
-		_, _ = db.Exec("PRAGMA foreign_keys = ON")
-	}
-
-	// 6. 설정들 다시 로드
-	a.loadLLMConfigFromDB()
-	a.loadWebConfigFromDB()
-	a.loadBBSConfigFromDB()
-
-	// 7. 관리자 계정 복구/생성
-	a.ensureAdminExists()
+	// 로그 남기기
+	log.Println("[INFO] 데이터베이스 콘텐츠 초기화 완료 (게시물, 댓글 삭제)")
 
 	return nil
 }
@@ -1501,4 +1482,242 @@ func (a *App) GetDatabaseInfo() map[string]interface{} {
 	log.Printf("[DEBUG] GetDatabaseInfo: systemRole = %s", systemRole)
 
 	return result
+}
+
+// ExportReferenceValues 참조값 내보내기
+func (a *App) ExportReferenceValues() (string, error) {
+	// 현재 값 가져오기
+	data := a.GetCharacterRefValues()
+
+	// 텍스트 포맷팅
+	var builder strings.Builder
+	builder.WriteString("[직종]\n")
+	builder.WriteString(data["job_categories"])
+	builder.WriteString("\n\n")
+
+	builder.WriteString("[취미]\n")
+	builder.WriteString(data["hobbies"])
+	builder.WriteString("\n\n")
+
+	builder.WriteString("[지역]\n")
+	builder.WriteString(data["regions"])
+	builder.WriteString("\n")
+
+	// 저장 다이얼로그 (DefaultFilename에 접미사 포함)
+	filename, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "참조값 내보내기",
+		DefaultFilename: "data_생성참조값.txt",
+		Filters:         []runtime.FileFilter{{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"}},
+	})
+
+	if err != nil || filename == "" {
+		return "", nil // 취소됨
+	}
+
+	err = os.WriteFile(filename, []byte(builder.String()), 0644)
+	if err != nil {
+		return "", err
+	}
+	return filename, nil
+}
+
+// ImportReferenceValues 참조값 불러오기
+func (a *App) ImportReferenceValues() (string, error) {
+	filename, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   "참조값 불러오기 (UTF-8)",
+		Filters: []runtime.FileFilter{{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"}},
+	})
+
+	if err != nil || filename == "" {
+		return "", nil
+	}
+
+	contentBytes, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	content := string(contentBytes)
+
+	// 파싱
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	var currentSection string
+	sections := make(map[string][]string)
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			currentSection = line
+			continue
+		}
+
+		if currentSection != "" {
+			sections[currentSection] = append(sections[currentSection], line)
+		}
+	}
+
+	// DB 저장
+	updates := 0
+	if val, ok := sections["[직종]"]; ok {
+		// 줄바꿈된 데이터들을 쉼표로 연결하여 저장 (SaveCharacterRefValue 내부에서 파싱/중복제거)
+		a.SaveCharacterRefValue("job_categories", strings.Join(val, ","))
+		updates++
+	}
+	if val, ok := sections["[취미]"]; ok {
+		a.SaveCharacterRefValue("hobbies", strings.Join(val, ","))
+		updates++
+	}
+	if val, ok := sections["[지역]"]; ok {
+		a.SaveCharacterRefValue("regions", strings.Join(val, ","))
+		updates++
+	}
+
+	if updates == 0 {
+		return "", fmt.Errorf("유효한 데이터 섹션([직종], [취미], [지역])을 찾지 못했습니다")
+	}
+
+	return filename, nil
+}
+
+// ExportPromptSettings 프롬프트 설정 내보내기
+func (a *App) ExportPromptSettings() (string, error) {
+	var builder strings.Builder
+
+	// 기본 프롬프트들
+	prompts := map[string]string{
+		"nickname_gen":        "[AI 캐릭터 닉네임 생성 프롬프트]",
+		"system_role":         "[시스템 롤]",
+		"post_instruction":    "[게시글 작성 지시문]",
+		"comment_instruction": "[댓글 작성 지시문]",
+		"reply_instruction":   "[답글 작성 지시문]",
+		"summary_instruction": "[AI 캐릭터 요약 지시문]",
+	}
+
+	// 순서 보장을 위해 키 슬라이스 사용
+	orderedKeys := []string{"nickname_gen", "system_role", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction"}
+
+	for _, key := range orderedKeys {
+		header := prompts[key]
+		content := a.GetPrompt(key)
+		builder.WriteString(header + "\n")
+		builder.WriteString(content + "\n\n")
+	}
+
+	// MBTI 설명
+	descriptions := a.GetMBTIDescriptions()
+	// MBTI 순서 (모델 정의 순)
+	for _, mbti := range models.MBTITypes {
+		if content, ok := descriptions[mbti]; ok {
+			builder.WriteString("[" + mbti + "]\n")
+			builder.WriteString(content + "\n\n")
+		}
+	}
+
+	// 저장 다이얼로그
+	filename, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "프롬프트 설정 내보내기",
+		DefaultFilename: "data_프롬프트.txt",
+		Filters:         []runtime.FileFilter{{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"}},
+	})
+
+	if err != nil || filename == "" {
+		return "", nil
+	}
+
+	err = os.WriteFile(filename, []byte(builder.String()), 0644)
+	if err != nil {
+		return "", err
+	}
+	return filename, nil
+}
+
+// ImportPromptSettings 프롬프트 설정 불러오기
+func (a *App) ImportPromptSettings() (string, error) {
+	filename, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:   "프롬프트 설정 불러오기 (UTF-8)",
+		Filters: []runtime.FileFilter{{DisplayName: "Text Files (*.txt)", Pattern: "*.txt"}},
+	})
+
+	if err != nil || filename == "" {
+		return "", nil
+	}
+
+	contentBytes, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	content := string(contentBytes)
+
+	// 라인 단위 파싱
+	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	var currentSection string
+	var currentContentBuilder strings.Builder
+	sections := make(map[string]string)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// 섹션 헤더 감지 ([...])
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			// 이전 섹션 저장
+			if currentSection != "" {
+				sections[currentSection] = strings.TrimSpace(currentContentBuilder.String())
+			}
+			// 새 섹션 시작
+			currentSection = trimmed
+			currentContentBuilder.Reset()
+		} else {
+			// 내용 누적 (헤더가 설정된 상태여야 함)
+			if currentSection != "" {
+				currentContentBuilder.WriteString(line + "\n")
+			}
+		}
+	}
+	// 마지막 섹션 저장
+	if currentSection != "" {
+		sections[currentSection] = strings.TrimSpace(currentContentBuilder.String())
+	}
+
+	// 역매핑
+	headerToKey := map[string]string{
+		"[AI 캐릭터 닉네임 생성 프롬프트]": "nickname_gen",
+		"[시스템 롤]":         "system_role",
+		"[게시글 작성 지시문]":    "post_instruction",
+		"[댓글 작성 지시문]":     "comment_instruction",
+		"[답글 작성 지시문]":     "reply_instruction",
+		"[AI 캐릭터 요약 지시문]": "summary_instruction",
+	}
+
+	updates := 0
+	for header, val := range sections {
+		// 일반 프롬프트 업데이트
+		if key, ok := headerToKey[header]; ok {
+			a.SavePrompt(key, val)
+			updates++
+			continue
+		}
+
+		// MBTI 업데이트 체크
+		mbti := strings.TrimSuffix(strings.TrimPrefix(header, "["), "]")
+		isMBTI := false
+		for _, t := range models.MBTITypes {
+			if t == mbti {
+				isMBTI = true
+				break
+			}
+		}
+		if isMBTI {
+			a.SaveMBTIDescription(mbti, val)
+			updates++
+		}
+	}
+
+	if updates == 0 {
+		return "", fmt.Errorf("유효한 프롬프트 데이터를 찾지 못했습니다")
+	}
+
+	return filename, nil
 }

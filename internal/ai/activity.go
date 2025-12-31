@@ -611,22 +611,38 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 		return
 	}
 
-	// LLM으로 새 닉네임 생성
-	newNickname, err := m.llmService.GenerateNickname(character)
-	if err != nil {
-		log.Printf("닉네임 생성 실패: %v\n", err)
-		return
+	oldNickname := character.Nickname
+	success := false
+
+	// 최대 3회 재시도
+	for i := 0; i < 3; i++ {
+		// LLM으로 새 닉네임 생성
+		newNickname, err := m.llmService.GenerateNickname(character)
+		if err != nil {
+			log.Printf("닉네임 생성 실패 (시도 %d/3): %v\n", i+1, err)
+			continue
+		}
+
+		character.Nickname = newNickname
+		err = m.characterService.UpdateCharacter(*character)
+		if err == nil {
+			log.Printf("닉네임 변경 완료: %s -> %s\n", oldNickname, newNickname)
+			success = true
+			break
+		}
+
+		// 실패 시 (중복 등) 로그 남기고 재시도
+		log.Printf("닉네임 변경 실패 (중복 등, 시도 %d/3): %s -> %s (%v)\n", i+1, oldNickname, newNickname, err)
+
+		// 닉네임 원복 후 재시도
+		character.Nickname = oldNickname
+
+		// 약간의 대기 (연속 요청 방지)
+		time.Sleep(500 * time.Millisecond)
 	}
 
-	// 닉네임 업데이트
-	oldNickname := character.Nickname
-	character.Nickname = newNickname
-	err = m.characterService.UpdateCharacter(*character)
-	if err != nil {
-		log.Printf("닉네임 변경 실패 (중복 등): %s -> %s (%v)\n", oldNickname, newNickname, err)
-		character.Nickname = oldNickname
-	} else {
-		log.Printf("닉네임 변경 완료: %s -> %s\n", oldNickname, newNickname)
+	if !success {
+		log.Printf("닉네임 변경 최종 실패: %s\n", oldNickname)
 	}
 }
 

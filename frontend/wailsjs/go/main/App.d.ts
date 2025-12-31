@@ -27,6 +27,10 @@ export function DeleteDatabase(arg1:string):Promise<void>;
 
 export function DeletePost(arg1:number):Promise<void>;
 
+export function ExportPromptSettings():Promise<string>;
+
+export function ExportReferenceValues():Promise<string>;
+
 export function GenerateCharacters(arg1:number):Promise<Array<models.AICharacter>>;
 
 export function GetAllCharacterStats():Promise<Record<number, main.CharacterStats>>;
@@ -72,6 +76,10 @@ export function GetPosts(arg1:number,arg2:number):Promise<models.PostList>;
 export function GetPrompt(arg1:string):Promise<string>;
 
 export function GetWebServerConfig():Promise<Record<string, any>>;
+
+export function ImportPromptSettings():Promise<string>;
+
+export function ImportReferenceValues():Promise<string>;
 
 export function IsAIActivityRunning():Promise<boolean>;
 

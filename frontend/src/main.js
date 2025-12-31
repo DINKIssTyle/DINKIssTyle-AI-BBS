@@ -1400,4 +1400,75 @@ if (btnBatchDelete) {
 }
 
 // 전역 함수 노출 (HTML onclick 이벤트용)
+// 전역 함수 노출 (HTML onclick 이벤트용)
 window.handleCharacterSort = handleCharacterSort;
+
+// ================================
+// 참조값 파일 불러오기 / 내보내기
+// ================================
+const btnImportRef = $('#btn-import-ref');
+if (btnImportRef) {
+    btnImportRef.addEventListener('click', async () => {
+        try {
+            const result = await go.ImportReferenceValues();
+            if (result) {
+                // 경로 구분자 처리 (Windows/Unix)
+                const filename = result.split(/[\\/]/).pop();
+                showToast(`참조값을 성공적으로 불러왔습니다: ${filename}`);
+                loadCharacterRefValues(); // UI 갱신
+            }
+        } catch (e) {
+            showToast('불러오기 실패: ' + e, 'error');
+        }
+    });
+}
+
+const btnExportRef = $('#btn-export-ref');
+if (btnExportRef) {
+    btnExportRef.addEventListener('click', async () => {
+        try {
+            const result = await go.ExportReferenceValues();
+            if (result) {
+                const filename = result.split(/[\\/]/).pop();
+                showToast(`참조값을 성공적으로 저장했습니다: ${filename}`);
+            }
+        } catch (e) {
+            showToast('내보내기 실패: ' + e, 'error');
+        }
+    });
+}
+
+// ================================
+// 프롬프트 설정 불러오기 / 내보내기
+// ================================
+const btnImportPrompt = $('#btn-import-prompt');
+if (btnImportPrompt) {
+    btnImportPrompt.addEventListener('click', async () => {
+        try {
+            const result = await go.ImportPromptSettings();
+            if (result) {
+                const filename = result.split(/[\\/]/).pop();
+                showToast(`프롬프트를 성공적으로 불러왔습니다: ${filename}`);
+                loadCompPrompts();
+                loadMBTIList();
+            }
+        } catch (e) {
+            showToast('불러오기 실패: ' + e, 'error');
+        }
+    });
+}
+
+const btnExportPrompt = $('#btn-export-prompt');
+if (btnExportPrompt) {
+    btnExportPrompt.addEventListener('click', async () => {
+        try {
+            const result = await go.ExportPromptSettings();
+            if (result) {
+                const filename = result.split(/[\\/]/).pop();
+                showToast(`프롬프트를 성공적으로 저장했습니다: ${filename}`);
+            }
+        } catch (e) {
+            showToast('내보내기 실패: ' + e, 'error');
+        }
+    });
+}

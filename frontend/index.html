@@ -130,7 +130,7 @@
     <div id="app">
         <!-- 헤더 (간소화됨) -->
         <header id="header">
-            <div class="header-title">DINKIssTyle AI BBS Manager</div>
+            <div class="header-title">DINKI'ssTyle AI BBS Manager</div>
             <div style="display: flex; flex-direction: column; align-items: flex-end;">
                 <div class="header-status">
                     <div class="status-indicator">
@@ -467,6 +467,10 @@
                                 </div>
                             </div>
                             <br>
+                            <div class="button-group" style="margin-bottom: 10px; justify-content: flex-end;">
+                                <button id="btn-import-ref" class="btn-secondary">📂 불러오기 (.txt)</button>
+                                <button id="btn-export-ref" class="btn-secondary">💾 내보내기 (.txt)</button>
+                            </div>
                             <div class="form-group">
                                 <p class="description">AI 캐릭터 자동 생성 시 사용되는 참조값입니다. 쉼표(,)로 구분하여 입력하세요.</p>
                                 <label>직종 목록</label>
@@ -670,6 +674,10 @@
                         <h3>AI 프롬프트 설정</h3>
                         <p class="description">AI 동작에 사용되는 프롬프트를 사용자화 합니다.<br>기초 템플릿을 확인하거나 수정사항을 되돌리려면 [초기화]를 누르세요.</p>
                         <br>
+                        <div class="button-group" style="margin-bottom: 10px; justify-content: flex-end;">
+                            <button id="btn-import-prompt" class="btn-secondary">📂 불러오기 (.txt)</button>
+                            <button id="btn-export-prompt" class="btn-secondary">💾 내보내기 (.txt)</button>
+                        </div>
                         <div class="form-group">
                             <label>AI 캐릭터 닉네임 생성 프롬프트</label>
                             <p class="hint">사용 가능 변수: {gender}, {age}, {job}, {hobby}, {mbti}, {mbti_desc}</p>
@@ -815,10 +823,14 @@
     <!-- 초기화 확인 모달 -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
-            <h2>데이터베이스 초기화</h2>
-            <p>정말로 초기화하시겠습니까? 모든 데이터가 삭제됩니다.</p>
-            <p>확인하려면 "데이터베이스 초기화"를 입력하세요:</p>
-            <input type="text" id="confirm-input" class="form-input" />
+            <h2>데이터베이스 콘텐츠 초기화</h2>
+            <p style="color:var(--error-color); font-weight:bold;">경고: 게시물, 댓글, 추천 기록이 모두 영구 삭제됩니다.</p>
+            <p style="font-size: 0.9em; margin-bottom: 15px; color: var(--text-color);">
+                ※ 계정, 캐릭터 및 각종 설정은 유지됩니다.<br>
+                ※ AI 캐릭터 삭제는 <b>[계정] 탭 &gt; [AI 캐릭터 관리 데이터베이스]</b>를 이용하세요.
+            </p>
+            <p>확인하려면 "데이터삭제"를 입력하세요:</p>
+            <input type="text" id="confirm-input" class="form-input" placeholder="데이터삭제" style="margin-top: 5px;" />
             <div class="button-group">
                 <button id="btn-confirm-reset" class="btn-danger">초기화</button>
                 <button id="btn-cancel-reset" class="btn-secondary">취소</button>
