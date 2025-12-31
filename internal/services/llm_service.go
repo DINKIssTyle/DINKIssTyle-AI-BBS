@@ -244,10 +244,14 @@ func (s *LLMService) GenerateReplyContent(character *models.AICharacter, post *m
 }
 
 // GenerateNickname AI 캐릭터 닉네임 생성
-func (s *LLMService) GenerateNickname(character *models.AICharacter) (string, error) {
+func (s *LLMService) GenerateNickname(character *models.AICharacter, excludeNicknames []string) (string, error) {
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 
 	userPrompt := s.getPromptWithDefault("nickname_gen", models.DefaultNicknamePrompt)
+
+	if len(excludeNicknames) > 0 {
+		userPrompt += fmt.Sprintf("\n\n[Constraint] The following nicknames are already taken or invalid. DO NOT use them: %s\nCreate a different, unique nickname.", strings.Join(excludeNicknames, ", "))
+	}
 
 	// 플레이스홀더 치환
 	prompt := strings.ReplaceAll(userPrompt, "{gender}", character.Gender)

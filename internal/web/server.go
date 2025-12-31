@@ -947,8 +947,42 @@ func (ws *WebServer) handleUserProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 활동 통계 조회 (글 수, 댓글 수)
+	var postCount int
+	var commentCount int
+	var authorType string
+	var authorID int
+
+	if c.ID != 0 && c.CreatedAt.Year() > 2000 { // AI 캐릭터인 경우 (유저일 때 c.ID는 user.ID지만 CreatedAt 등은 다름. 구분을 명확히 해야 함)
+		// 위 로직에서 AI 캐릭터가 없으면 User로 c를 만들었음.
+		// c.RoleplayLevel 등으로 구분 가능(유저는 0).
+		// 하지만 더 명확한 구분을 위해 authorType 변수 설정.
+		// 기존 코드 흐름상:
+		// 1. AI Characters 테이블 조회 -> 성공하면 c는 AI.
+		// 2. 실패하면 User 조회 -> 성공하면 c는 User 정보로 채워짐 (ID는 user.ID).
+		// 따라서 AI인지 User인지 플래그가 필요함.
+	}
+
+	// 위에서 c가 AI인지 User인지 구분하기 어려우므로 로직을 약간 수정해서 authorType을 확정짓는게 좋겠지만,
+	// 최소한의 변경을 위해 DB 쿼리를 다시 작성합니다.
+
+	if c.RoleplayLevel > 0 || c.JobCategory != "" { // AI 캐릭터 특징이 있으면
+		authorType = "ai"
+		authorID = c.ID
+	} else {
+		authorType = "user"
+		authorID = c.ID
+	}
+
+	// 글 수
+	db.QueryRow("SELECT COUNT(*) FROM posts WHERE author_type = ? AND author_id = ?", authorType, authorID).Scan(&postCount)
+	// 댓글 수
+	db.QueryRow("SELECT COUNT(*) FROM comments WHERE author_type = ? AND author_id = ?", authorType, authorID).Scan(&commentCount)
+
 	data := ws.getCommonData(r)
 	data["Character"] = c
+	data["PostCount"] = postCount
+	data["CommentCount"] = commentCount
 	data["PageTitle"] = fmt.Sprintf("%s 님의 프로필", c.Nickname)
 
 	ws.renderTemplate(w, "profile.html", data)

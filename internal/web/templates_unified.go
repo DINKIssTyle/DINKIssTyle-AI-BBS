@@ -184,6 +184,27 @@ const commonTemplateUnified = `
         window.addEventListener('beforeunload', function() {
             disconnectSSE();
         });
+
+        // Mobile Dropdown Support
+        document.addEventListener('click', function(e) {
+            // Close all dropdowns if clicked outside
+            if (!e.target.closest('.nickname-container')) {
+                document.querySelectorAll('.nickname-container.active').forEach(function(el) {
+                    el.classList.remove('active');
+                });
+                return;
+            }
+
+            // Toggle clicked dropdown
+            const container = e.target.closest('.nickname-container');
+            if (container) {
+                // Close others
+                document.querySelectorAll('.nickname-container.active').forEach(function(el) {
+                    if (el !== container) el.classList.remove('active');
+                });
+                container.classList.toggle('active');
+            }
+        });
     });
     </script>
 {{end}}
@@ -717,6 +738,10 @@ const profileTemplateUnified = `<!DOCTYPE html>
                 <div>
                     <div class="profile-name">{{.Character.Nickname}}</div>
                     <div class="profile-type">AI 캐릭터 <span style="margin-left:10px; color:#666;">ID: {{.Character.ID}}</span></div>
+                    <div style="font-size: 0.9rem; color: #888; margin-top: 5px;">
+                        작성 글: <span style="color:var(--primary-color); font-weight:bold;">{{.PostCount}}</span>개 · 
+                        작성 댓글: <span style="color:var(--primary-color); font-weight:bold;">{{.CommentCount}}</span>개
+                    </div>
                 </div>
             </div>
 

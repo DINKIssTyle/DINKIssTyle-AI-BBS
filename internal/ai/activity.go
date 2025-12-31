@@ -614,10 +614,13 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 	oldNickname := character.Nickname
 	success := false
 
+	// 시도한 닉네임 목록 (중복 방지용)
+	var excluded []string
+
 	// 최대 3회 재시도
 	for i := 0; i < 3; i++ {
-		// LLM으로 새 닉네임 생성
-		newNickname, err := m.llmService.GenerateNickname(character)
+		// LLM으로 새 닉네임 생성 (제외 목록 전달)
+		newNickname, err := m.llmService.GenerateNickname(character, excluded)
 		if err != nil {
 			log.Printf("닉네임 생성 실패 (시도 %d/3): %v\n", i+1, err)
 			continue
@@ -633,6 +636,9 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 
 		// 실패 시 (중복 등) 로그 남기고 재시도
 		log.Printf("닉네임 변경 실패 (중복 등, 시도 %d/3): %s -> %s (%v)\n", i+1, oldNickname, newNickname, err)
+
+		// 실패한 닉네임 목록에 추가
+		excluded = append(excluded, newNickname)
 
 		// 닉네임 원복 후 재시도
 		character.Nickname = oldNickname
@@ -679,21 +685,42 @@ func (m *ActivityManager) respondToComments() {
 		return
 	}
 
-	// 랜덤하게 캐릭터 순서 섞기
+	// 랜덤하게 캐릭터 순서 섞기 (공평한 기회)
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rng.Shuffle(len(characters), func(i, j int) {
 		characters[i], characters[j] = characters[j], characters[i]
 	})
 
-	// 최대 2명의 캐릭터만 반응
-	limit := 2
-	if len(characters) < limit {
-		limit = len(characters)
-	}
+	// 실제 답글 작업을 수행한 횟수 카운트
+	repliedCount := 0
+	// 한 주기당 최대 처리할 답글 수 (너무 많이 몰리지 않게)
+	maxRepliesPerCycle := 3
 
-	for i := 0; i < limit; i++ {
+	for i := range characters {
 		character := &characters[i]
-		m.respondToCommentForCharacter(character)
+
+		// 답글 달기 시도 (작업 수행 여부 반환하도록 수정하거나, 내부에서 확인)
+		// respondToCommentForCharacter가 작업을 했는지 알 수 없으므로,
+		// 여기서 먼저 댓글이 있는지 확인하는게 효율적이지만,
+		// 기존 구조 유지를 위해 respondToCommentForCharacter를 호출하고
+		// 내부 로직은 그대로 둡니다.
+		// 다만, respondToCommentForCharacter는 "댓글이 없으면" 그냥 리턴하므로
+		// 여기서 모든 캐릭터를 순회하되, 실제로 답글을 단 경우에만 카운트를 증가시키고 break 하는게 맞는데,
+		// respondToCommentForCharacter 함수는 리턴값이 없음.
+
+		// 따라서 respondToCommentForCharacter를 수정하여 bool을 반환하게 하거나,
+		// 아니면 여기서 Check를 먼저 해야 함.
+		// 성능상 여기서 Check(GetCommentsOnCharacterPosts)를 먼저 하는게 낫다.
+
+		comments, err := m.commentService.GetCommentsOnCharacterPosts(character.ID, 1) // 1개만 있어도 대상임
+		if err == nil && len(comments) > 0 {
+			m.respondToCommentForCharacter(character)
+			repliedCount++
+
+			if repliedCount >= maxRepliesPerCycle {
+				break
+			}
+		}
 	}
 }
 
