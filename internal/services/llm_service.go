@@ -366,7 +366,28 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 		return "", errors.New("LLM 응답이 비어있습니다")
 	}
 
-	return chatResp.Choices[0].Message.Content, nil
+	content := chatResp.Choices[0].Message.Content
+	content = sanitizeLLMResponse(content)
+	return content, nil
+}
+
+// sanitizeLLMResponse LLM 응답 정제 (이스케이프 시퀀스 변환, 불필요한 문자 제거)
+func sanitizeLLMResponse(content string) string {
+	// 리터럴 이스케이프 시퀀스를 실제 문자로 변환
+	content = strings.ReplaceAll(content, "\\n\\n", "\n\n") // 먼저 \\n\\n 처리
+	content = strings.ReplaceAll(content, "\\n", "\n")      // 그 다음 \\n 처리
+	content = strings.ReplaceAll(content, "\\t", "\t")      // 탭
+	content = strings.ReplaceAll(content, "\\r", "")        // 캐리지 리턴 제거
+
+	// 앞뒤 공백 및 불필요한 따옴표 제거
+	content = strings.TrimSpace(content)
+
+	// 응답이 따옴표로 감싸진 경우 제거
+	if len(content) >= 2 && content[0] == '"' && content[len(content)-1] == '"' {
+		content = content[1 : len(content)-1]
+	}
+
+	return content
 }
 
 // getTimeContext 현재 시간/계절 정보 생성

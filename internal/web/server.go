@@ -556,7 +556,14 @@ func (ws *WebServer) handlePost(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" && user != nil {
 		content := r.FormValue("content")
 		if content != "" {
-			ws.commentService.CreateCommentByAuthor("user", user.ID, id, content, nil)
+			// parent_id 처리 (대댓글인 경우)
+			var parentID *int
+			if pid := r.FormValue("parent_id"); pid != "" {
+				if pidInt, err := strconv.Atoi(pid); err == nil && pidInt > 0 {
+					parentID = &pidInt
+				}
+			}
+			ws.commentService.CreateCommentByAuthor("user", user.ID, id, content, parentID)
 			http.Redirect(w, r, fmt.Sprintf("/post/%d", id), http.StatusSeeOther)
 			return
 		}

@@ -545,6 +545,23 @@ const postTemplateUnified = `<!DOCTYPE html>
                     </form>
                 </div>
 
+                {{/* 답글 버튼 및 폼 (로그인 사용자만) */}}
+                {{if $.User}}
+                <div style="margin-top:10px; text-align:right;">
+                    <button type="button" class="btn btn-sm btn-outline" onclick="showReplyForm({{.ID}})">답글</button>
+                </div>
+                <div id="reply-form-{{.ID}}" style="display:none; margin-top:10px; padding:15px; background:rgba(0,0,0,0.1); border-radius:8px;">
+                    <form method="POST" action="/post/{{$.Post.ID}}">
+                        <input type="hidden" name="parent_id" value="{{.ID}}">
+                        <textarea name="content" placeholder="답글을 입력하세요" required style="width:100%; min-height:60px; padding:12px; background:var(--table-bg); color:var(--text-color); border:1px solid var(--border-color); border-radius:6px; resize:vertical; font-family:inherit; font-size:0.95rem;"></textarea>
+                        <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                            <button type="submit" class="btn">등록</button>
+                            <button type="button" class="btn btn-outline" onclick="hideReplyForm({{.ID}})">취소</button>
+                        </div>
+                    </form>
+                </div>
+                {{end}}
+
                 {{/* 대댓글 표시 */}}
                 {{if .Replies}}
                 <div class="replies" style="margin-left: 30px; margin-top: 15px; border-left: 2px solid var(--border-color); padding-left: 15px;">
@@ -562,13 +579,31 @@ const postTemplateUnified = `<!DOCTYPE html>
                                 </div>
                                 <span class="comment-date">{{.CreatedAt | formatDate}}</span>
                             </div>
+                            {{if and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
+                            <div class="comment-actions" id="comment-actions-{{.ID}}">
+                                <button type="button" class="btn btn-sm btn-outline" onclick="editComment({{.ID}})">수정</button>
+                                <form method="POST" action="/comment/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                                    <button type="submit" class="btn btn-sm btn-outline" style="border-color:#f44;color:#f44;">삭제</button>
+                                </form>
+                            </div>
+                            {{end}}
                         </div>
-                        <div class="comment-content">{{.Content}}</div>
+                        <div class="comment-content" id="comment-content-{{.ID}}">{{.Content}}</div>
                         {{if .HasRecommended}}
                         <div style="text-align:center; margin-top:8px; padding:5px 10px; background:rgba(76,175,80,0.15); border-radius:6px; color:#4CAF50; font-size:0.8rem;">
                             이 게시물을 추천했습니다 👍
                         </div>
                         {{end}}
+                        {{/* 대댓글 수정 폼 */}}
+                        <div class="comment-edit-form" id="comment-edit-{{.ID}}" style="display:none; margin-top:10px;">
+                            <form method="POST" action="/comment/edit/{{.ID}}">
+                                <textarea name="content" id="comment-textarea-{{.ID}}" required style="width:100%; min-height:60px; padding:12px; background:var(--table-bg); color:var(--text-color); border:1px solid var(--border-color); border-radius:6px; resize:vertical; font-family:inherit; font-size:0.95rem;">{{.Content}}</textarea>
+                                <div style="margin-top:10px; display:flex; gap:8px;">
+                                    <button type="submit" class="btn">수정</button>
+                                    <button type="button" class="btn btn-outline" onclick="cancelEdit({{.ID}})">취소</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                     {{end}}
                 </div>
@@ -590,6 +625,26 @@ const postTemplateUnified = `<!DOCTYPE html>
     </div>
 
     {{template "footer" .}}
+    <script>
+    // 댓글 수정 폼 토글
+    function editComment(id) {
+        document.getElementById('comment-content-' + id).style.display = 'none';
+        document.getElementById('comment-actions-' + id).style.display = 'none';
+        document.getElementById('comment-edit-' + id).style.display = 'block';
+    }
+    function cancelEdit(id) {
+        document.getElementById('comment-content-' + id).style.display = 'block';
+        document.getElementById('comment-actions-' + id).style.display = 'flex';
+        document.getElementById('comment-edit-' + id).style.display = 'none';
+    }
+    // 답글 폼 토글
+    function showReplyForm(id) {
+        document.getElementById('reply-form-' + id).style.display = 'block';
+    }
+    function hideReplyForm(id) {
+        document.getElementById('reply-form-' + id).style.display = 'none';
+    }
+    </script>
 </body>
 </html>`
 
