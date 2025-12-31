@@ -261,7 +261,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>{{.Config.Footer}}</footer>
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
     <script>
         // Console Toggle Logic
         document.addEventListener('DOMContentLoaded', function() {
@@ -525,7 +525,7 @@ const postTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>{{.Config.Footer}}</footer>
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
     <script>
     // Console Toggle Logic
     document.addEventListener('DOMContentLoaded', function() {
@@ -714,7 +714,7 @@ const writeTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>{{.Config.Footer}}</footer>
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
 </body>
 </html>`
 
@@ -941,7 +941,7 @@ const profileTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
 
-    <footer>{{.Config.Footer}}</footer>
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
 </body>
 </html>`
 
@@ -1027,6 +1027,6 @@ const userCommentsTemplateUnified = `<!DOCTYPE html>
         {{end}}
     </div>
 
-    <footer>{{.Config.Footer}}</footer>
+    <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
 </body>
 </html>`
