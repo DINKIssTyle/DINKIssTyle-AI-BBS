@@ -7,6 +7,7 @@ export namespace models {
 	    age: number;
 	    birthdate: string;
 	    region: string;
+	    avatar_image: string;
 	    hobby: string;
 	    job_category: string;
 	    mbti: string;
@@ -35,6 +36,7 @@ export namespace models {
 	        this.age = source["age"];
 	        this.birthdate = source["birthdate"];
 	        this.region = source["region"];
+	        this.avatar_image = source["avatar_image"];
 	        this.hobby = source["hobby"];
 	        this.job_category = source["job_category"];
 	        this.mbti = source["mbti"];

@@ -89,7 +89,7 @@ func (d *Database) Connect() error {
 	if err != nil {
 		fmt.Printf("[WARNING] WAL 모드 설정 실패: %v\n", err)
 	}
-	_, err = db.Exec("PRAGMA busy_timeout=5000;")
+	_, err = db.Exec("PRAGMA busy_timeout=10000;")
 	if err != nil {
 		fmt.Printf("[WARNING] Busy Timeout 설정 실패: %v\n", err)
 	}
@@ -206,6 +206,37 @@ func (d *Database) Migrate() error {
 		fmt.Println("[DEBUG] posts 테이블에 is_pinned 컬럼을 추가했습니다.")
 	}
 
+	// ai_characters 테이블에 avatar_image 컬럼이 없으면 추가
+	rows, err = d.db.Query("PRAGMA table_info(ai_characters)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasAvatarImage := false
+	for rows.Next() {
+		var cid int
+		var name, dtype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "avatar_image" {
+			hasAvatarImage = true
+			break
+		}
+	}
+
+	if !hasAvatarImage {
+		_, err := d.db.Exec("ALTER TABLE ai_characters ADD COLUMN avatar_image TEXT DEFAULT ''")
+		if err != nil {
+			return fmt.Errorf("ai_characters 마이그레이션 실패 (avatar_image): %w", err)
+		}
+		fmt.Println("[DEBUG] ai_characters 테이블에 avatar_image 컬럼을 추가했습니다.")
+	}
+
 	return nil
 }
 
@@ -271,7 +302,7 @@ func (d *Database) ResetDatabase() error {
 
 	// SQLite 최적화 및 동시성 설정 (재연결 후에도 적용)
 	db.Exec("PRAGMA journal_mode=WAL;")
-	db.Exec("PRAGMA busy_timeout=5000;")
+	db.Exec("PRAGMA busy_timeout=10000;")
 
 	return nil
 }
@@ -336,7 +367,7 @@ func (d *Database) SwitchDatabase(name string) error {
 
 	// SQLite 최적화
 	db.Exec("PRAGMA journal_mode=WAL;")
-	db.Exec("PRAGMA busy_timeout=5000;")
+	db.Exec("PRAGMA busy_timeout=10000;")
 
 	fmt.Printf("[DEBUG] 데이터베이스 전환됨: %s\n", name)
 	return nil
@@ -372,7 +403,7 @@ func (d *Database) CreateNewDatabase(name string, schemaSQL string) error {
 
 	// SQLite 최적화
 	db.Exec("PRAGMA journal_mode=WAL;")
-	db.Exec("PRAGMA busy_timeout=5000;")
+	db.Exec("PRAGMA busy_timeout=10000;")
 
 	// 스키마 적용
 	if schemaSQL != "" {

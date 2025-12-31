@@ -3,6 +3,7 @@
 package web
 
 import (
+	"aibbs/internal/assets"
 	"aibbs/internal/database"
 	"aibbs/internal/models"
 	"aibbs/internal/services"
@@ -71,6 +72,12 @@ func NewWebServer(db *database.Database, userService *services.UserService, post
 
 	// 템플릿 로드
 	ws.loadTemplates()
+
+	// 아바타 이미지 핸들러 등록 (임베딩된 FS 사용)
+	// /avarta/ 경로로 접근 시 avarta 폴더 내용 서빙
+	// assets.go의 avatarFS는 avarta 폴더를 포함하므로 루트에서 바로 접근 가능
+	fs := http.FileServer(http.FS(assets.GetAvatarFS()))
+	http.Handle("/avarta/", fs)
 
 	return ws
 }

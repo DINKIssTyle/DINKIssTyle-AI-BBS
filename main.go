@@ -14,7 +14,7 @@ import (
 )
 
 //go:embed all:frontend/dist
-var assets embed.FS
+var frontendAssets embed.FS
 
 func main() {
 	// 플래그 파싱
@@ -28,17 +28,17 @@ func main() {
 	println("[DEBUG] App instance created")
 
 	// 윈도우 크기 및 제목 설정
-	title := "DINKIssTyle AI BBS"
+	title := "DINKI'ssTyle AI BBS"
 	width := 900
 	height := 700
 	minWidth := 900
 	minHeight := 700
 
 	if *modePtr == "char_manager" {
-		title = "AI 캐릭터 관리자 - DINKIssTyle AI BBS"
-		width = 1420
+		title = "AI 캐릭터 관리자 - DINKI'ssTyle AI BBS"
+		width = 1600
 		height = 900
-		minWidth = 1420
+		minWidth = 1600
 		minHeight = 800
 	}
 
@@ -50,7 +50,7 @@ func main() {
 		MinWidth:  minWidth,
 		MinHeight: minHeight,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets: frontendAssets,
 		},
 		BackgroundColour: &options.RGBA{R: 0, G: 27, B: 51, A: 1}, // #001B33
 		OnStartup:        app.startup,

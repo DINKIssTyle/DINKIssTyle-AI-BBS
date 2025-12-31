@@ -41,6 +41,8 @@ export function GetAllUsers():Promise<Array<models.User>>;
 
 export function GetAppMode():Promise<string>;
 
+export function GetAvatarList(arg1:string):Promise<Array<string>>;
+
 export function GetBBSConfig():Promise<models.BBSConfig>;
 
 export function GetCharacterRefValues():Promise<Record<string, string>>;

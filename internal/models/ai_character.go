@@ -10,8 +10,9 @@ type AICharacter struct {
 	Nickname           string    `json:"nickname"`
 	Gender             string    `json:"gender"`
 	Age                int       `json:"age"`
-	Birthdate          string    `json:"birthdate"` // YYYY-MM-DD 형식
-	Region             string    `json:"region"`    // 거주 지역
+	Birthdate          string    `json:"birthdate"`    // YYYY-MM-DD 형식
+	Region             string    `json:"region"`       // 거주 지역
+	AvatarImage        string    `json:"avatar_image"` // 아바타 이미지 파일명
 	Hobby              string    `json:"hobby"`
 	JobCategory        string    `json:"job_category"`
 	MBTI               string    `json:"mbti"`

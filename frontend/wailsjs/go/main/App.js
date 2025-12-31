@@ -78,6 +78,10 @@ export function GetAppMode() {
   return window['go']['main']['App']['GetAppMode']();
 }
 
+export function GetAvatarList(arg1) {
+  return window['go']['main']['App']['GetAvatarList'](arg1);
+}
+
 export function GetBBSConfig() {
   return window['go']['main']['App']['GetBBSConfig']();
 }

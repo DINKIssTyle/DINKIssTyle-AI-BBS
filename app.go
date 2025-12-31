@@ -4,6 +4,7 @@ package main
 
 import (
 	"aibbs/internal/ai"
+	"aibbs/internal/assets"
 	"aibbs/internal/database"
 	"aibbs/internal/models"
 	"aibbs/internal/services"
@@ -306,6 +307,16 @@ func (a *App) ResetMBTIDescription(mbti string) error {
 
 	_, err := db.Exec("DELETE FROM mbti_prompts WHERE mbti = ?", mbti)
 	return err
+}
+
+// GetAvatarList 성별에 따른 아바타 이미지 목록 반환
+func (a *App) GetAvatarList(gender string) []string {
+	images, err := assets.GetAvatarImages(gender)
+	if err != nil {
+		log.Printf("아바타 목록 로드 실패: %v", err)
+		return []string{}
+	}
+	return images
 }
 
 // ensureAdminExists 관리자가 없으면 첫 번째 유저를 관리자로 설정

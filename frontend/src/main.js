@@ -17,6 +17,22 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
+// 디바운스 유틸리티 - 연속 호출 시 마지막 호출만 실행
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 캐릭터별 디바운스 함수 저장소
+const characterUpdateDebounceMap = new Map();
+
 // 초기화
 document.addEventListener('DOMContentLoaded', async () => {
     // 앱 모드 확인
@@ -735,6 +751,12 @@ async function loadCharacters() {
     try {
         const chars = await go.GetAllCharacters();
         const stats = await go.GetAllCharacterStats();
+        // 아바타 및 MBTI 캐싱
+        state.avatarCache = {
+            male: await go.GetAvatarList("male"),
+            female: await go.GetAvatarList("female")
+        };
+        state.mbtiTypes = await go.GetMBTITypes();
         state.cachedCharacters = chars || [];
         state.cachedStats = stats || {};
         sortAndRenderCharacters();
@@ -860,17 +882,35 @@ function renderCharacters(chars, stats = {}) {
             <td>${c.id}</td>
             <td><input type="text" value="${escapeHtml(c.nickname)}" data-field="nickname" style="width:80px;"/></td>
             <td>
-                <select data-field="gender">
+                <select data-field="gender" onchange="handleTableChange(this, 'gender', ${c.id})">
                     <option value="남성" ${c.gender === '남성' ? 'selected' : ''}>남성</option>
                     <option value="여성" ${c.gender === '여성' ? 'selected' : ''}>여성</option>
                 </select>
+            </td>
+            <td>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <img src="/avarta/${c.gender === '남성' ? 'male' : 'female'}/${c.avatar_image}" 
+                         style="width:30px; height:30px; border-radius:50%; object-fit:cover;" 
+                         onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'"
+                         id="avatar-preview-${c.id}">
+                    <select data-field="avatar_image" style="width:105px;" onchange="handleTableChange(this, 'avatar_image', ${c.id})">
+                        <option value="">(없음)</option>
+                        ${(state.avatarCache[c.gender === '남성' ? 'male' : 'female'] || []).map(img =>
+            `<option value="${img}" ${c.avatar_image === img ? 'selected' : ''}>${img}</option>`
+        ).join('')}
+                    </select>
+                </div>
             </td>
             <td><input type="number" value="${c.age}" min="10" max="80" data-field="age" style="width:40px;"/></td>
             <td><input type="text" value="${c.birthdate || ''}" data-field="birthdate" placeholder="YYYY-MM-DD" style="width:90px;"/></td>
             <td><input type="text" value="${escapeHtml(c.region) || ''}" data-field="region" style="width:60px;"/></td>
             <td><input type="text" value="${escapeHtml(c.job_category)}" data-field="job_category" style="width:100px;"/></td>
             <td><input type="text" value="${escapeHtml(c.hobby) || ''}" data-field="hobby" style="width:80px;"/></td>
-            <td><input type="text" value="${c.mbti}" maxlength="4" data-field="mbti" style="width:50px;"/></td>
+            <td>
+                <select data-field="mbti" style="width:70px;">
+                    ${state.mbtiTypes.map(mbti => `<option value="${mbti}" ${c.mbti === mbti ? 'selected' : ''}>${mbti}</option>`).join('')}
+                </select>
+            </td>
             <td><input type="number" value="${c.aggression_level}" min="1" max="10" data-field="aggression_level" style="width:40px;"/></td>
             <td><input type="number" value="${c.formality_level}" min="1" max="10" data-field="formality_level" style="width:40px;"/></td>
             <td><input type="text" value="${escapeHtml(c.persona_summary) || ''}" data-field="persona_summary" placeholder="인격 요약" style="width:150px;"/></td>
@@ -896,9 +936,10 @@ function renderCharacters(chars, stats = {}) {
 async function updateCharacter(id, tr) {
     if (!tr) return;
     const data = {
-        id: id,
+        id: parseInt(id),
         nickname: tr.querySelector('[data-field="nickname"]').value,
         gender: tr.querySelector('[data-field="gender"]').value,
+        avatar_image: tr.querySelector('[data-field="avatar_image"]').value,
         age: parseInt(tr.querySelector('[data-field="age"]').value),
         birthdate: tr.querySelector('[data-field="birthdate"]').value,
         region: tr.querySelector('[data-field="region"]').value,
@@ -917,6 +958,16 @@ async function updateCharacter(id, tr) {
     };
     try { await go.UpdateCharacter(data); }
     catch (e) { showToast('캐릭터 수정 실패: ' + e, 'error'); }
+}
+
+// 디바운스된 캐릭터 업데이트 (캐릭터 ID별로 별도 디바운스)
+function debouncedUpdateCharacter(id, tr) {
+    if (!characterUpdateDebounceMap.has(id)) {
+        characterUpdateDebounceMap.set(id, debounce((charId, charTr) => {
+            updateCharacter(charId, charTr);
+        }, 500));
+    }
+    characterUpdateDebounceMap.get(id)(id, tr);
 }
 
 async function deleteCharacter(id) {
@@ -999,6 +1050,65 @@ async function loadWebConfig() {
         showToast('웹 서버 설정 로드 실패: ' + e, 'error');
     }
 }
+
+// 테이블 내 변경 핸들러 (성별 변경 시 아바타 목록 갱신 + 자동 저장)
+window.handleTableChange = function (el, field, id) {
+    const tr = el.closest('tr');
+
+    if (field === 'gender') {
+        const gender = el.value;
+        const avatarSelect = tr.querySelector('[data-field="avatar_image"]');
+        const avatarPreview = tr.querySelector(`#avatar-preview-${id}`);
+
+        // 아바타 목록 갱신
+        const list = state.avatarCache[gender === '남성' ? 'male' : 'female'] || [];
+        avatarSelect.innerHTML = '<option value="">(없음)</option>' + list.map(img =>
+            `<option value="${img}">${img}</option>`
+        ).join('');
+
+        // 미리보기 초기화 (또는 첫번째로 설정)
+        if (list.length > 0) {
+            avatarSelect.value = list[0];
+            avatarPreview.src = `/avarta/${gender === '남성' ? 'male' : 'female'}/${list[0]}`;
+        } else {
+            avatarSelect.value = "";
+            avatarPreview.src = "";
+        }
+
+        // 변경 사항 저장 (디바운스)
+        debouncedUpdateCharacter(id, tr);
+    } else if (field === 'avatar_image') {
+        // 아바타 변경 시 미리보기 업데이트 및 저장
+        const genderSelect = tr.querySelector('[data-field="gender"]');
+        const gender = genderSelect.value;
+        const avatarPreview = tr.querySelector(`#avatar-preview-${id}`);
+
+        if (el.value) {
+            avatarPreview.src = `/avarta/${gender === '남성' ? 'male' : 'female'}/${el.value}`;
+        } else {
+            avatarPreview.src = ""; // or placeholder
+        }
+
+        // 변경 사항 저장 (디바운스)
+        debouncedUpdateCharacter(id, tr);
+    }
+};
+
+// MBTI 등 다른 input에도 저장 이벤트 연결 필요 (기존엔 없었음)
+// 이벤트 위임으로 처리
+document.addEventListener('change', function (e) {
+    if (e.target.matches('#character-tbody [data-field]')) {
+        const field = e.target.dataset.field;
+        // gender와 avatar_image는 handleTableChange에서 처리함
+        if (field !== 'gender' && field !== 'avatar_image') {
+            const tr = e.target.closest('tr');
+            if (tr) {
+                const id = tr.dataset.charId;
+                debouncedUpdateCharacter(id, tr);
+            }
+        }
+    }
+});
 
 async function saveWebConfig() {
     const port = $('#web-port').value;
