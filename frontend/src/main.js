@@ -941,7 +941,7 @@ async function stopWebServer() {
 function updateWebStatus(running, port = '8080', ssl = false) {
     const statusEl = $('#web-status-text');
     const urlLink = $('#web-link');
-    const portDisplay = $('#web-port-display');
+    const addressDisplay = $('#web-address-display');
     const headerDot = $('#header-web-dot');
 
     if (running) {
@@ -951,12 +951,12 @@ function updateWebStatus(running, port = '8080', ssl = false) {
             const url = `${protocol}://localhost:${port}`;
             urlLink.href = url; urlLink.textContent = url;
         }
-        if (portDisplay) portDisplay.textContent = port;
+        if (addressDisplay) addressDisplay.style.display = 'block';
         if (headerDot) headerDot.className = 'status-dot status-on';
     } else {
         if (statusEl) { statusEl.textContent = '정지됨'; statusEl.className = 'value status-off'; }
         if (urlLink) { urlLink.href = '#'; urlLink.textContent = '-'; }
-        if (portDisplay) portDisplay.textContent = '-';
+        if (addressDisplay) addressDisplay.style.display = 'none';
         if (headerDot) headerDot.className = 'status-dot status-off';
     }
 }

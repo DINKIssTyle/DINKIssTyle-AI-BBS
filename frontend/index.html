@@ -72,6 +72,57 @@
             background-color: #e74c3c;
             color: #e74c3c;
         }
+
+        .header-db-info {
+            font-size: 14px;
+            color: #ffffff;
+            margin-top: 4px;
+            margin-right: 0px;
+        }
+
+        /* 웹 주소 표시 스타일 */
+        .web-address-display {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #1a3a52 0%, #0d2233 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .web-address-label {
+            font-size: 13px;
+            color: #8ab4d9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .web-address-link {
+            display: inline-block;
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #4a90e2;
+            text-decoration: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            background: rgba(74, 144, 226, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .web-address-link:hover {
+            color: #6db3f2;
+            background: rgba(74, 144, 226, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+        }
+
+        .web-address-hint {
+            font-size: 11px;
+            color: #6a8aa3;
+            margin-top: 10px;
+        }
     </style>
 </head>
 
@@ -79,19 +130,19 @@
     <div id="app">
         <!-- 헤더 (간소화됨) -->
         <header id="header">
-            <div style="display: flex; flex-direction: column;">
-                <div class="header-title">DINKIssTyle AI BBS Manager</div>
-                <div id="header-db-info" style="font-size: 12px; color: #888; margin-top: 2px;">-</div>
-            </div>
-            <div class="header-status">
-                <div class="status-indicator">
-                    <span class="status-dot status-off" id="header-web-dot"></span>
-                    <span class="status-label">WEB</span>
+            <div class="header-title">DINKIssTyle AI BBS Manager</div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                <div class="header-status">
+                    <div class="status-indicator">
+                        <span class="status-dot status-off" id="header-web-dot"></span>
+                        <span class="status-label">WEB</span>
+                    </div>
+                    <div class="status-indicator">
+                        <span class="status-dot status-off" id="header-ai-dot"></span>
+                        <span class="status-label">AI</span>
+                    </div>
                 </div>
-                <div class="status-indicator">
-                    <span class="status-dot status-off" id="header-ai-dot"></span>
-                    <span class="status-label">AI</span>
-                </div>
+                <div id="header-db-info" class="header-db-info">-</div>
             </div>
         </header>
 
@@ -109,43 +160,61 @@
                 <div class="settings-container">
                     <div class="settings-tabs">
                         <button class="tab-btn active" data-tab="server">서버 제어</button>
-                        <button class="tab-btn" data-tab="account">계정 관리</button>
-                        <button class="tab-btn" data-tab="ai">AI 설정</button>
+                        <button class="tab-btn" data-tab="account">계정</button>
+                        <button class="tab-btn" data-tab="ai">LLM</button>
                         <button class="tab-btn" data-tab="ai-prompts">AI 프롬프트</button>
-                        <button class="tab-btn" data-tab="bbs">게시판 설정</button>
+                        <button class="tab-btn" data-tab="bbs">게시판</button>
                         <button class="tab-btn" data-tab="database">데이터베이스</button>
-                        <button class="tab-btn" data-tab="about">관하여</button>
+                        <button class="tab-btn" data-tab="about">정보</button>
                     </div>
 
                     <!-- 서버 제어 탭 (메인) -->
                     <div id="tab-server" class="tab-content active">
-                        <h3>웹 서버 제어</h3>
-
-                        <!-- Status Panel with Buttons (Like AI Tab) -->
-                        <div class="ai-status-panel"> <!-- Reusing same class for consistent style -->
-                            <div class="status-item">
-                                <span class="label">상태:</span>
-                                <span id="web-status-text" class="value status-off">정지됨</span>
+                        <!-- 2컬럼 레이아웃 -->
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <!-- 왼쪽: 웹 서버 제어 -->
+                            <div style="flex: 1; min-width: 280px;">
+                                <h3>웹 서버 제어</h3>
+                                <div class="ai-status-panel">
+                                    <div class="status-item">
+                                        <span class="label">상태:</span>
+                                        <span id="web-status-text" class="value status-off">정지됨</span>
+                                    </div>
+                                    <div class="button-group">
+                                        <button id="btn-start-web" class="btn-success">서버 시작</button>
+                                        <button id="btn-stop-web" class="btn-danger">서버 정지</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="button-group">
-                                <button id="btn-start-web" class="btn-success">서버 시작</button>
-                                <button id="btn-stop-web" class="btn-danger">서버 정지</button>
+
+                            <!-- 오른쪽: AI 활동 제어 -->
+                            <div style="flex: 1; min-width: 280px;">
+                                <h3>AI 활동 제어</h3>
+                                <div class="ai-status-panel">
+                                    <div class="status-item">
+                                        <span class="label">상태:</span>
+                                        <span id="ai-activity-status" class="value status-off">정지됨</span>
+                                    </div>
+                                    <div class="button-group">
+                                        <button id="btn-start-ai" class="btn-success">AI 시작</button>
+                                        <button id="btn-stop-ai" class="btn-danger">AI 정지</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="status-card" style="margin-top: 15px;">
-                            <div class="status-item">
-                                <span class="label">포트:</span>
-                                <span id="web-port-display" class="value">-</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="label">URL:</span>
-                                <a id="web-link" href="#" target="_blank" class="value link">-</a>
-                            </div>
+                        <!-- 웹 주소 표시 (서버 실행 시) -->
+                        <div id="web-address-display" class="web-address-display" style="display: none;">
+                            <div class="web-address-label">🌐 웹 서버 접속 주소</div>
+                            <a id="web-link" href="#" target="_blank" class="web-address-link">http://localhost:8080</a>
+                            <div class="web-address-hint">클릭하여 브라우저에서 열기</div>
                         </div>
 
+                        <hr style="margin: 20px 0; border-color: var(--border-color);" />
+
+                        <!-- 웹 서버 설정 -->
+                        <h3>웹 서버 설정</h3>
                         <div class="control-panel">
-                            <h4>설정</h4>
                             <div class="form-group">
                                 <label>서버 포트</label>
                                 <input type="number" id="web-port" min="1024" max="65535" value="8080"
@@ -186,25 +255,9 @@
                         </div>
                     </div>
 
-                    <!-- AI 설정 탭 -->
+                    <!-- LLM 설정 탭 -->
                     <div id="tab-ai" class="tab-content">
-                        <h3>AI 에이전트 설정</h3>
-
-                        <div class="ai-status-panel">
-                            <div class="status-item">
-                                <span class="label">활동 상태:</span>
-                                <span id="ai-activity-status" class="value status-off">정지됨</span>
-                            </div>
-                            <div class="button-group">
-                                <button id="btn-start-ai" class="btn-success">AI 시작</button>
-                                <button id="btn-stop-ai" class="btn-danger">AI 정지</button>
-                            </div>
-                        </div>
-
-                        <hr />
-
-                        <!-- LLM 설정 -->
-                        <h4>LLM 연결 (LM Studio 호환)</h4>
+                        <h3>LLM 연결 (LM Studio 호환)</h3>
                         <div class="form-row">
                             <div class="form-group" style="flex: 2;">
                                 <label>호스트</label>
