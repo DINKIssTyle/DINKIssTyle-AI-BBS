@@ -158,6 +158,9 @@ func (ws *WebServer) loadTemplates() {
 	tmpl = template.Must(tmpl.New("unified/profile.html").Parse(commonTemplateUnified + profileTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/user_comments.html").Parse(commonTemplateUnified + userCommentsTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/error.html").Parse(commonTemplateUnified + errorTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/account.html").Parse(commonTemplateUnified + accountTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/settings.html").Parse(commonTemplateUnified + settingsTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/admin.html").Parse(commonTemplateUnified + adminTemplateUnified))
 
 	// Fallback for classic (can use unified content for now if classic not specifically needed)
 	tmpl = template.Must(tmpl.New("classic/profile.html").Parse(profileTemplateUnified))
@@ -309,6 +312,11 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/profile/", ws.handleUserProfile)
 	mux.HandleFunc("/comments/user/", ws.handleUserComments)
 	mux.HandleFunc("/events/logs", ws.handleLogStream) // Log Stream Route
+
+	// 사용자 계정 및 설정 페이지
+	mux.HandleFunc("/account", ws.handleAccount)
+	mux.HandleFunc("/settings", ws.handleSettings)
+	mux.HandleFunc("/admin", ws.handleAdmin)
 
 	// 아바타 이미지 서빙 (임베딩된 FS)
 	avatarFS := http.FileServer(http.FS(assets.GetAvatarFS()))
@@ -1164,4 +1172,189 @@ func (ws *WebServer) handleLogStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+}
+
+// handleAccount 계정 관리 페이지
+func (ws *WebServer) handleAccount(w http.ResponseWriter, r *http.Request) {
+	data := ws.getCommonData(r)
+	user := data["User"].(*models.User)
+
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data["PageTitle"] = "계정 관리"
+	var msg, errMsg string
+
+	if r.Method == "POST" {
+		action := r.FormValue("action")
+
+		switch action {
+		case "nickname":
+			newNickname := r.FormValue("nickname")
+			err := ws.userService.ChangeNicknameByUserID(user.ID, newNickname)
+			if err != nil {
+				errMsg = err.Error()
+			} else {
+				msg = "닉네임이 변경되었습니다."
+			}
+		case "password":
+			oldPwd := r.FormValue("old_password")
+			newPwd := r.FormValue("new_password")
+			confirmPwd := r.FormValue("confirm_password")
+			if newPwd != confirmPwd {
+				errMsg = "새 비밀번호가 일치하지 않습니다."
+			} else {
+				err := ws.userService.ChangePasswordByUserID(user.ID, oldPwd, newPwd)
+				if err != nil {
+					errMsg = err.Error()
+				} else {
+					msg = "비밀번호가 변경되었습니다."
+				}
+			}
+		case "delete":
+			confirmation := r.FormValue("confirmation")
+			if confirmation != "지금탈퇴" {
+				errMsg = "탈퇴 확인 문구가 올바르지 않습니다."
+			} else {
+				err := ws.userService.DeleteUser(user.ID)
+				if err != nil {
+					errMsg = err.Error()
+				} else {
+					// 세션 삭제 및 쿠키 제거
+					http.SetCookie(w, &http.Cookie{Name: "session_id", Value: "", Path: "/", MaxAge: -1})
+					http.Redirect(w, r, "/", http.StatusSeeOther)
+					return
+				}
+			}
+		}
+	}
+
+	data["Message"] = msg
+	data["Error"] = errMsg
+	ws.renderTemplate(w, "account.html", data)
+}
+
+// handleSettings 설정 페이지
+func (ws *WebServer) handleSettings(w http.ResponseWriter, r *http.Request) {
+	data := ws.getCommonData(r)
+	user := data["User"].(*models.User)
+
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data["PageTitle"] = "설정"
+	var msg, errMsg string
+
+	if r.Method == "POST" {
+		theme := r.FormValue("theme")
+		fontStyle := r.FormValue("font_style")
+		timezone := r.FormValue("timezone")
+		postsPerPageStr := r.FormValue("posts_per_page")
+		postsPerPage := 20
+		if pp, err := strconv.Atoi(postsPerPageStr); err == nil && pp > 0 && pp <= 100 {
+			postsPerPage = pp
+		}
+
+		err := ws.userService.UpdateSettings(user.ID, theme, fontStyle, timezone, postsPerPage)
+		if err != nil {
+			errMsg = err.Error()
+		} else {
+			msg = "설정이 저장되었습니다."
+			// Refresh user data
+			user.Theme = theme
+			user.FontStyle = fontStyle
+			user.Timezone = timezone
+			user.PostsPerPage = postsPerPage
+		}
+	}
+
+	data["Message"] = msg
+	data["Error"] = errMsg
+	ws.renderTemplate(w, "settings.html", data)
+}
+
+// handleAdmin 관리자 페이지
+func (ws *WebServer) handleAdmin(w http.ResponseWriter, r *http.Request) {
+	data := ws.getCommonData(r)
+	user := data["User"].(*models.User)
+
+	if user == nil || !user.IsAdmin {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	data["PageTitle"] = "관리자"
+	var msg, errMsg string
+	db := ws.db.GetDB()
+
+	if r.Method == "POST" {
+		action := r.FormValue("action")
+
+		switch action {
+		case "title":
+			newTitle := r.FormValue("title")
+			ws.bbsConfig.Title = newTitle
+			// Save to database
+			if db != nil {
+				db.Exec("UPDATE settings SET value = ? WHERE key = 'title'", newTitle)
+			}
+			msg = "게시판 타이틀이 변경되었습니다."
+		case "prompt":
+			promptKey := r.FormValue("prompt_key")
+			promptContent := r.FormValue("prompt_content")
+			isReset := r.FormValue("reset") == "1"
+
+			if promptKey != "" && db != nil {
+				if isReset {
+					// 초기화: DB에서 삭제
+					_, err := db.Exec("DELETE FROM prompts WHERE key_name = ?", promptKey)
+					if err != nil {
+						errMsg = "초기화 실패: " + err.Error()
+					} else {
+						msg = promptKey + " 프롬프트가 초기화되었습니다."
+					}
+				} else {
+					// 저장
+					_, err := db.Exec("INSERT OR REPLACE INTO prompts (key_name, content) VALUES (?, ?)", promptKey, promptContent)
+					if err != nil {
+						errMsg = "저장 실패: " + err.Error()
+					} else {
+						msg = promptKey + " 프롬프트가 저장되었습니다."
+					}
+				}
+			}
+		}
+	}
+
+	// 프롬프트 데이터 로드
+	prompts := make(map[string]string)
+	promptKeys := []string{"system_role", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction", "nickname_gen"}
+	defaults := map[string]string{
+		"system_role":         models.DefaultSystemRole,
+		"post_instruction":    models.DefaultPostInstruction,
+		"comment_instruction": models.DefaultCommentInstruction,
+		"reply_instruction":   models.DefaultReplyInstruction,
+		"summary_instruction": models.DefaultSummaryInstruction,
+		"nickname_gen":        models.DefaultNicknamePrompt,
+	}
+
+	for _, key := range promptKeys {
+		prompts[key] = defaults[key] // 기본값
+		if db != nil {
+			var content string
+			err := db.QueryRow("SELECT content FROM prompts WHERE key_name = ?", key).Scan(&content)
+			if err == nil {
+				prompts[key] = content
+			}
+		}
+	}
+
+	data["Prompts"] = prompts
+	data["Message"] = msg
+	data["Error"] = errMsg
+	ws.renderTemplate(w, "admin.html", data)
 }

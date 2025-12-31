@@ -100,8 +100,12 @@ func (s *UserService) GetUserByID(id int) (*models.User, error) {
 
 	user := &models.User{}
 	err := db.QueryRow(
-		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE id = ?", id,
-	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
+		`SELECT id, username, nickname, is_admin, created_at, updated_at,
+		        COALESCE(theme, 'dark'), COALESCE(font_style, 'default'), 
+		        COALESCE(timezone, 'Asia/Seoul'), COALESCE(posts_per_page, 20)
+		 FROM users WHERE id = ?`, id,
+	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt,
+		&user.Theme, &user.FontStyle, &user.Timezone, &user.PostsPerPage)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("사용자를 찾을 수 없습니다")
@@ -122,8 +126,12 @@ func (s *UserService) FindUserByNickname(nickname string) (*models.User, error) 
 
 	user := &models.User{}
 	err := db.QueryRow(
-		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE nickname = ?", nickname,
-	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
+		`SELECT id, username, nickname, is_admin, created_at, updated_at,
+		        COALESCE(theme, 'dark'), COALESCE(font_style, 'default'), 
+		        COALESCE(timezone, 'Asia/Seoul'), COALESCE(posts_per_page, 20)
+		 FROM users WHERE nickname = ?`, nickname,
+	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt,
+		&user.Theme, &user.FontStyle, &user.Timezone, &user.PostsPerPage)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("사용자를 찾을 수 없습니다")
@@ -150,9 +158,13 @@ func (s *UserService) LoginForWeb(username, password string) (*models.User, erro
 	user := &models.User{}
 
 	err := db.QueryRow(
-		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE username = ? AND password_hash = ?",
+		`SELECT id, username, nickname, is_admin, created_at, updated_at,
+		        COALESCE(theme, 'dark'), COALESCE(font_style, 'default'), 
+		        COALESCE(timezone, 'Asia/Seoul'), COALESCE(posts_per_page, 20)
+		 FROM users WHERE username = ? AND password_hash = ?`,
 		username, passwordHash,
-	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt,
+		&user.Theme, &user.FontStyle, &user.Timezone, &user.PostsPerPage)
 
 	if err == sql.ErrNoRows {
 		log.Printf("[DEBUG] LoginForWeb failed: user '%s' not found or password incorrect", username)
@@ -181,9 +193,13 @@ func (s *UserService) Login(username, password string) (*models.User, error) {
 	user := &models.User{}
 
 	err := db.QueryRow(
-		"SELECT id, username, nickname, is_admin, created_at, updated_at FROM users WHERE username = ? AND password_hash = ?",
+		`SELECT id, username, nickname, is_admin, created_at, updated_at,
+		        COALESCE(theme, 'dark'), COALESCE(font_style, 'default'), 
+		        COALESCE(timezone, 'Asia/Seoul'), COALESCE(posts_per_page, 20)
+		 FROM users WHERE username = ? AND password_hash = ?`,
 		username, passwordHash,
-	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Username, &user.Nickname, &user.IsAdmin, &user.CreatedAt, &user.UpdatedAt,
+		&user.Theme, &user.FontStyle, &user.Timezone, &user.PostsPerPage)
 
 	if err == sql.ErrNoRows {
 		log.Printf("[DEBUG] Login failed: user '%s' not found or password incorrect", username)
@@ -323,6 +339,116 @@ func (s *UserService) SetUserAdmin(userID int, isAdmin bool) error {
 	_, err := db.Exec("UPDATE users SET is_admin = ? WHERE id = ?", isAdmin, userID)
 	if err != nil {
 		return fmt.Errorf("권한 설정 실패: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateSettings 사용자 설정 저장
+func (s *UserService) UpdateSettings(userID int, theme, fontStyle, timezone string, postsPerPage int) error {
+	db := s.db.GetDB()
+	if db == nil {
+		return errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	_, err := db.Exec(
+		"UPDATE users SET theme = ?, font_style = ?, timezone = ?, posts_per_page = ? WHERE id = ?",
+		theme, fontStyle, timezone, postsPerPage, userID,
+	)
+	if err != nil {
+		return fmt.Errorf("설정 저장 실패: %w", err)
+	}
+
+	// 현재 사용자인 경우 메모리에도 반영
+	if s.currentUser != nil && s.currentUser.ID == userID {
+		s.currentUser.Theme = theme
+		s.currentUser.FontStyle = fontStyle
+		s.currentUser.Timezone = timezone
+		s.currentUser.PostsPerPage = postsPerPage
+	}
+
+	return nil
+}
+
+// ChangePasswordByUserID 사용자 ID 기반 비밀번호 변경 (웹용)
+func (s *UserService) ChangePasswordByUserID(userID int, oldPassword, newPassword string) error {
+	if oldPassword == "" || newPassword == "" {
+		return errors.New("비밀번호를 입력해주세요")
+	}
+
+	db := s.db.GetDB()
+	if db == nil {
+		return errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	// 현재 비밀번호 확인
+	oldHash := hashPassword(oldPassword)
+	var count int
+	err := db.QueryRow(
+		"SELECT COUNT(*) FROM users WHERE id = ? AND password_hash = ?",
+		userID, oldHash,
+	).Scan(&count)
+
+	if err != nil {
+		return fmt.Errorf("비밀번호 확인 실패: %w", err)
+	}
+	if count == 0 {
+		return errors.New("현재 비밀번호가 일치하지 않습니다")
+	}
+
+	// 새 비밀번호로 변경
+	newHash := hashPassword(newPassword)
+	_, err = db.Exec("UPDATE users SET password_hash = ? WHERE id = ?", newHash, userID)
+	if err != nil {
+		return fmt.Errorf("비밀번호 변경 실패: %w", err)
+	}
+
+	return nil
+}
+
+// ChangeNicknameByUserID 사용자 ID 기반 닉네임 변경 (웹용)
+func (s *UserService) ChangeNicknameByUserID(userID int, newNickname string) error {
+	if newNickname == "" {
+		return errors.New("닉네임을 입력해주세요")
+	}
+
+	if err := validateNickname(newNickname); err != nil {
+		return err
+	}
+
+	db := s.db.GetDB()
+	if db == nil {
+		return errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	// 중복 확인
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE nickname = ? AND id != ?", newNickname, userID).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("닉네임 확인 실패: %w", err)
+	}
+	if count > 0 {
+		return errors.New("이미 사용 중인 닉네임입니다")
+	}
+
+	_, err = db.Exec("UPDATE users SET nickname = ? WHERE id = ?", newNickname, userID)
+	if err != nil {
+		return fmt.Errorf("닉네임 변경 실패: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteUser 회원 탈퇴
+func (s *UserService) DeleteUser(userID int) error {
+	db := s.db.GetDB()
+	if db == nil {
+		return errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	_, err := db.Exec("DELETE FROM users WHERE id = ?", userID)
+	if err != nil {
+		return fmt.Errorf("회원 탈퇴 실패: %w", err)
 	}
 
 	return nil

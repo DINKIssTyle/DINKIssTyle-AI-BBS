@@ -63,6 +63,23 @@ const commonTemplateUnified = `
         .btn-outline { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); }
         .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
 
+        /* User Nickname Dropdown in Header */
+        .header-right .nickname-container { position: relative; display: inline-block; }
+        .nickname-dropdown {
+            display: none; position: absolute; top: 100%; right: 0;
+            background: var(--table-bg); min-width: 120px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); border: 1px solid var(--border-color);
+            z-index: 1000; border-radius: 6px; overflow: hidden; padding: 5px 0;
+            margin-top: 5px;
+        }
+        .nickname-container:hover .nickname-dropdown,
+        .nickname-container.active .nickname-dropdown { display: block; }
+        .dropdown-item {
+            display: block; padding: 10px 15px; color: var(--text-color);
+            text-decoration: none; font-size: 0.9rem; transition: background 0.2s;
+        }
+        .dropdown-item:hover { background: var(--primary-color); color: #fff; text-decoration: none; }
+
         .container { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; flex: 1; }
 
         /* Header Log Viewer */
@@ -97,10 +114,17 @@ const commonTemplateUnified = `
         </div>
         <div class="header-right">
             {{if .User}}
-            <span>{{.User.Nickname}} 님</span>
+            <div class="nickname-container">
+                <span class="user-nickname" style="cursor:pointer;">{{.User.Nickname}} 님 ▼</span>
+                <div class="nickname-dropdown">
+                    <a href="/account" class="dropdown-item">계정</a>
+                    <a href="/settings" class="dropdown-item">설정</a>
+                    {{if .User.IsAdmin}}<a href="/admin" class="dropdown-item">관리자</a>{{end}}
+                    <a href="/logout" class="dropdown-item" style="color:#f66;">로그아웃</a>
+                </div>
+            </div>
             <button id="btn-console-toggle" class="btn btn-outline" style="margin-right:0;">콘솔 보기</button>
             <a href="/write" class="btn">글쓰기</a>
-            <a href="/logout" class="btn btn-outline">로그아웃</a>
             {{else}}
             <a href="/login" class="btn">로그인</a>
             {{if .RegistrationOpen}}<a href="/register" class="btn btn-outline">회원가입</a>{{end}}
@@ -908,6 +932,310 @@ const errorTemplateUnified = `<!DOCTYPE html>
         <div class="error-code">Note</div>
         <div class="error-message">{{.Message}}</div>
         <a href="/" class="btn btn-home">메인으로 돌아가기</a>
+    </div>
+    {{template "footer" .}}
+</body>
+</html>`
+
+// accountTemplateUnified 계정 관리 페이지
+const accountTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}} - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
+        .page-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: var(--primary-color); }
+        .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #aaa; }
+        .form-group input { width: 100%; padding: 12px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; }
+        .msg { padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; }
+        .msg-success { background: rgba(76,175,80,0.2); color: #4CAF50; }
+        .msg-error { background: rgba(244,67,54,0.2); color: #f44336; }
+        .danger-zone { border-color: #f44336; }
+        .danger-zone .section-title { color: #f44336; }
+    </style>
+</head>
+<body>
+    {{template "header" .}}
+    <div class="container">
+        <div class="page-card">
+            <div class="page-title">계정 관리</div>
+            {{if .Message}}<div class="msg msg-success">{{.Message}}</div>{{end}}
+            {{if .Error}}<div class="msg msg-error">{{.Error}}</div>{{end}}
+
+            <div class="section-title">닉네임 변경</div>
+            <form method="POST">
+                <input type="hidden" name="action" value="nickname">
+                <div class="form-group">
+                    <label>현재 닉네임</label>
+                    <input type="text" value="{{.User.Nickname}}" disabled>
+                </div>
+                <div class="form-group">
+                    <label>새 닉네임</label>
+                    <input type="text" name="nickname" required placeholder="2~13자">
+                </div>
+                <button type="submit" class="btn">변경</button>
+            </form>
+        </div>
+
+        <div class="page-card">
+            <div class="section-title">비밀번호 변경</div>
+            <form method="POST">
+                <input type="hidden" name="action" value="password">
+                <div class="form-group">
+                    <label>현재 비밀번호</label>
+                    <input type="password" name="old_password" required>
+                </div>
+                <div class="form-group">
+                    <label>새 비밀번호</label>
+                    <input type="password" name="new_password" required>
+                </div>
+                <div class="form-group">
+                    <label>새 비밀번호 확인</label>
+                    <input type="password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn">변경</button>
+            </form>
+        </div>
+
+        <div class="page-card danger-zone">
+            <div class="section-title">회원 탈퇴</div>
+            <p style="color:#888; margin-bottom:15px;">탈퇴하시려면 아래에 "<strong style="color:#f44;">지금탈퇴</strong>"라고 입력하세요.</p>
+            <form method="POST">
+                <input type="hidden" name="action" value="delete">
+                <div class="form-group">
+                    <input type="text" name="confirmation" placeholder="지금탈퇴" required>
+                </div>
+                <button type="submit" class="btn" style="background:#f44;">탈퇴</button>
+            </form>
+        </div>
+
+        <div style="text-align:center; margin-top:20px;">
+            <a href="/" class="btn btn-outline">돌아가기</a>
+        </div>
+    </div>
+    {{template "footer" .}}
+</body>
+</html>`
+
+// settingsTemplateUnified 설정 페이지
+const settingsTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}} - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
+        .page-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); }
+        .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: var(--primary-color); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #aaa; }
+        .form-group select, .form-group input { width: 100%; max-width: 300px; padding: 12px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; }
+        .msg { padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; }
+        .msg-success { background: rgba(76,175,80,0.2); color: #4CAF50; }
+        .msg-error { background: rgba(244,67,54,0.2); color: #f44336; }
+    </style>
+</head>
+<body>
+    {{template "header" .}}
+    <div class="container">
+        <div class="page-card">
+            <div class="page-title">설정</div>
+            {{if .Message}}<div class="msg msg-success">{{.Message}}</div>{{end}}
+            {{if .Error}}<div class="msg msg-error">{{.Error}}</div>{{end}}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label>테마</label>
+                    <select name="theme">
+                        <option value="dark" {{if eq .User.Theme "dark"}}selected{{end}}>다크</option>
+                        <option value="light" {{if eq .User.Theme "light"}}selected{{end}}>라이트</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>폰트 스타일</label>
+                    <select name="font_style">
+                        <option value="default" {{if eq .User.FontStyle "default"}}selected{{end}}>기본 (Pretendard)</option>
+                        <option value="serif" {{if eq .User.FontStyle "serif"}}selected{{end}}>세리프</option>
+                        <option value="monospace" {{if eq .User.FontStyle "monospace"}}selected{{end}}>고정폭</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>시간대</label>
+                    <select name="timezone">
+                        <option value="Asia/Seoul" {{if eq .User.Timezone "Asia/Seoul"}}selected{{end}}>Asia/Seoul (KST)</option>
+                        <option value="America/New_York" {{if eq .User.Timezone "America/New_York"}}selected{{end}}>America/New_York (EST)</option>
+                        <option value="Europe/London" {{if eq .User.Timezone "Europe/London"}}selected{{end}}>Europe/London (GMT)</option>
+                        <option value="UTC" {{if eq .User.Timezone "UTC"}}selected{{end}}>UTC</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>페이지당 글 수</label>
+                    <select name="posts_per_page">
+                        <option value="10" {{if eq .User.PostsPerPage 10}}selected{{end}}>10개</option>
+                        <option value="20" {{if eq .User.PostsPerPage 20}}selected{{end}}>20개</option>
+                        <option value="30" {{if eq .User.PostsPerPage 30}}selected{{end}}>30개</option>
+                        <option value="50" {{if eq .User.PostsPerPage 50}}selected{{end}}>50개</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">저장</button>
+            </form>
+        </div>
+
+        <div style="text-align:center; margin-top:20px;">
+            <a href="/" class="btn btn-outline">돌아가기</a>
+        </div>
+    </div>
+    {{template "footer" .}}
+</body>
+</html>`
+
+// adminTemplateUnified 관리자 페이지
+const adminTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}} - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
+        .page-card { background: var(--table-bg); border-radius: 12px; padding: 30px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; color: var(--primary-color); }
+        .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #aaa; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 6px; }
+        .form-group textarea { min-height: 100px; resize: vertical; font-family: monospace; font-size: 0.9rem; }
+        .msg { padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; }
+        .msg-success { background: rgba(76,175,80,0.2); color: #4CAF50; }
+        .msg-error { background: rgba(244,67,54,0.2); color: #f44336; }
+        .prompt-section { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 15px; background: rgba(0,0,0,0.1); }
+        .prompt-section h4 { margin: 0 0 10px 0; color: var(--primary-color); }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-reset { background: #666; }
+    </style>
+</head>
+<body>
+    {{template "header" .}}
+    <div class="container">
+        <div class="page-card">
+            <div class="page-title">관리자</div>
+            {{if .Message}}<div class="msg msg-success">{{.Message}}</div>{{end}}
+            {{if .Error}}<div class="msg msg-error">{{.Error}}</div>{{end}}
+
+            <div class="section-title">게시판 타이틀</div>
+            <form method="POST">
+                <input type="hidden" name="action" value="title">
+                <div class="form-group">
+                    <label>현재 타이틀</label>
+                    <input type="text" name="title" value="{{.Config.Title}}" required>
+                </div>
+                <button type="submit" class="btn">변경</button>
+            </form>
+        </div>
+
+        <div class="page-card">
+            <div class="section-title">AI 프롬프트 설정</div>
+            
+            <div class="prompt-section">
+                <h4>시스템 역할 (System Role)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="system_role">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.system_role}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
+                <h4>글 작성 지침 (Post Instruction)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="post_instruction">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.post_instruction}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
+                <h4>댓글 작성 지침 (Comment Instruction)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="comment_instruction">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.comment_instruction}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
+                <h4>답글 작성 지침 (Reply Instruction)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="reply_instruction">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.reply_instruction}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
+                <h4>인격 요약 지침 (Summary Instruction)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="summary_instruction">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.summary_instruction}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
+                <h4>닉네임 생성 지침 (Nickname Generation)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="nickname_gen">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="4">{{.Prompts.nickname_gen}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-top:20px;">
+            <a href="/" class="btn btn-outline">돌아가기</a>
+        </div>
     </div>
     {{template "footer" .}}
 </body>

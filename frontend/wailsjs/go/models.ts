@@ -276,6 +276,10 @@ export namespace models {
 	    created_at: any;
 	    // Go type: time
 	    updated_at: any;
+	    theme: string;
+	    font_style: string;
+	    timezone: string;
+	    posts_per_page: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new User(source);
@@ -289,6 +293,10 @@ export namespace models {
 	        this.is_admin = source["is_admin"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.updated_at = this.convertValues(source["updated_at"], null);
+	        this.theme = source["theme"];
+	        this.font_style = source["font_style"];
+	        this.timezone = source["timezone"];
+	        this.posts_per_page = source["posts_per_page"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

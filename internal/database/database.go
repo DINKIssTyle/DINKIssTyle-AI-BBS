@@ -237,6 +237,51 @@ func (d *Database) Migrate() error {
 		fmt.Println("[DEBUG] ai_characters 테이블에 avatar_image 컬럼을 추가했습니다.")
 	}
 
+	// users 테이블에 설정 컬럼들 추가
+	userSettingsColumns := []struct {
+		name     string
+		sqlType  string
+		defValue string
+	}{
+		{"theme", "TEXT", "'dark'"},
+		{"font_style", "TEXT", "'default'"},
+		{"timezone", "TEXT", "'Asia/Seoul'"},
+		{"posts_per_page", "INTEGER", "20"},
+	}
+
+	for _, col := range userSettingsColumns {
+		rows, err = d.db.Query("PRAGMA table_info(users)")
+		if err != nil {
+			return err
+		}
+
+		hasColumn := false
+		for rows.Next() {
+			var cid int
+			var name, dtype string
+			var notnull int
+			var dfltValue interface{}
+			var pk int
+			if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+				rows.Close()
+				return err
+			}
+			if name == col.name {
+				hasColumn = true
+				break
+			}
+		}
+		rows.Close()
+
+		if !hasColumn {
+			_, err := d.db.Exec(fmt.Sprintf("ALTER TABLE users ADD COLUMN %s %s DEFAULT %s", col.name, col.sqlType, col.defValue))
+			if err != nil {
+				return fmt.Errorf("users 마이그레이션 실패 (%s): %w", col.name, err)
+			}
+			fmt.Printf("[DEBUG] users 테이블에 %s 컬럼을 추가했습니다.\n", col.name)
+		}
+	}
+
 	return nil
 }
 

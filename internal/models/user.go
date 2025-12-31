@@ -13,6 +13,11 @@ type User struct {
 	IsAdmin      bool      `json:"is_admin"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	// 사용자 설정
+	Theme        string `json:"theme"`          // 'dark', 'light'
+	FontStyle    string `json:"font_style"`     // 'default', 'serif', 'monospace'
+	Timezone     string `json:"timezone"`       // 'Asia/Seoul' 등
+	PostsPerPage int    `json:"posts_per_page"` // 기본 20
 }
 
 // UserCreate 사용자 생성 요청
