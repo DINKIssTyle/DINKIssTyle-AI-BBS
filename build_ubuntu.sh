@@ -30,9 +30,20 @@ install_wails_deps() {
     echo -e "${YELLOW}[INFO] Wails 필수 라이브러리 설치 중...${NC}"
     if [ "$PACKAGE_MANAGER" = "apt" ]; then
         sudo apt-get update
-        # 최신 Ubuntu 버전에서는 4.1-dev가 필요할 수 있으므로 함께 시도하거나 대체 권장
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev build-essential || \
-        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential
+        # Ubuntu 버전에 따라 WebKit 패키지가 다름
+        # Ubuntu 22.04+: libwebkit2gtk-4.1-dev (4.0-dev 없음)
+        # Ubuntu 20.04 이하: libwebkit2gtk-4.0-dev
+        if apt-cache show libwebkit2gtk-4.1-dev &>/dev/null; then
+            echo -e "${YELLOW}[INFO] Ubuntu 22.04+ 감지 - WebKit 4.1 설치${NC}"
+            sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev build-essential
+        elif apt-cache show libwebkit2gtk-4.0-dev &>/dev/null; then
+            echo -e "${YELLOW}[INFO] Ubuntu 20.04 이하 감지 - WebKit 4.0 설치${NC}"
+            sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev build-essential
+        else
+            echo -e "${RED}[ERROR] WebKit GTK 패키지를 찾을 수 없습니다.${NC}"
+            echo "수동으로 설치해주세요: sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev"
+            exit 1
+        fi
     elif [ "$PACKAGE_MANAGER" = "dnf" ]; then
         sudo dnf install -y gtk3-devel webkit2gtk3-devel gcc-c++
     elif [ "$PACKAGE_MANAGER" = "pacman" ]; then
@@ -89,10 +100,12 @@ check_wails() {
     echo -e "${GREEN}[OK] Wails: $(wails version 2>/dev/null || echo 'installed')${NC}"
 }
 
-# Wails 필수 라이브러리 확인
+# Wails 필수 라이브러리 확인 (WebKit 4.0 또는 4.1)
 echo ""
 echo "Wails 필수 라이브러리 확인..."
-if ! pkg-config --exists gtk+-3.0 webkit2gtk-4.0 2>/dev/null; then
+if ! pkg-config --exists gtk+-3.0 2>/dev/null; then
+    install_wails_deps
+elif ! pkg-config --exists webkit2gtk-4.0 2>/dev/null && ! pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
     install_wails_deps
 fi
 
