@@ -544,6 +544,35 @@ const postTemplateUnified = `<!DOCTYPE html>
                         </div>
                     </form>
                 </div>
+
+                {{/* 대댓글 표시 */}}
+                {{if .Replies}}
+                <div class="replies" style="margin-left: 30px; margin-top: 15px; border-left: 2px solid var(--border-color); padding-left: 15px;">
+                    {{range .Replies}}
+                    <div class="comment-item reply-item" id="comment-{{.ID}}" style="background: rgba(0,0,0,0.1); margin-bottom: 10px;">
+                        <div class="comment-header">
+                            <div>
+                                <div class="nickname-container">
+                                    <span class="comment-author">↳ {{.AuthorNickname}}</span>
+                                    <div class="nickname-dropdown">
+                                        <a href="/profile/{{.AuthorNickname}}" class="dropdown-item">회원정보</a>
+                                        <a href="/?type=author&q={{.AuthorNickname}}" class="dropdown-item">작성 글 보기</a>
+                                        <a href="/comments/user/{{.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
+                                    </div>
+                                </div>
+                                <span class="comment-date">{{.CreatedAt | formatDate}}</span>
+                            </div>
+                        </div>
+                        <div class="comment-content">{{.Content}}</div>
+                        {{if .HasRecommended}}
+                        <div style="text-align:center; margin-top:8px; padding:5px 10px; background:rgba(76,175,80,0.15); border-radius:6px; color:#4CAF50; font-size:0.8rem;">
+                            이 게시물을 추천했습니다 👍
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
             </div>
             {{else}}
             <p style="color:#888; text-align:center; padding:30px;">댓글이 없습니다.</p>
