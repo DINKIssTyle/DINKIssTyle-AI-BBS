@@ -136,7 +136,18 @@ cd ..
 # Wails 빌드
 echo ""
 echo "[4/4] Wails 빌드 중..."
-wails build
+
+# WebKit 버전에 따라 빌드 태그 설정
+if pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
+    echo -e "${YELLOW}[INFO] WebKit 4.1 감지 - webkit2_41 태그 사용${NC}"
+    wails build -tags webkit2_41
+elif pkg-config --exists webkit2gtk-4.0 2>/dev/null; then
+    echo -e "${YELLOW}[INFO] WebKit 4.0 감지 - 기본 빌드${NC}"
+    wails build
+else
+    echo -e "${RED}[ERROR] WebKit가 설치되지 않았습니다.${NC}"
+    exit 1
+fi
 
 echo ""
 echo "================================"
