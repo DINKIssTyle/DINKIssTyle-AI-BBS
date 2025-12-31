@@ -636,7 +636,10 @@ func (a *App) TestLLMConnection(host, port, model string) error {
 }
 
 // SaveLLMConfig LLM 설정 저장
-func (a *App) SaveLLMConfig(host, port, model1, model2, model3 string, postsPerHour, commentsPerHour, maxTokens int, temperature float64) error {
+func (a *App) SaveLLMConfig(host, port, model1, model2, model3 string, postsPerHour, commentsPerHour, maxTokens int, temperature float64, timeout int) error {
+	if timeout <= 0 {
+		timeout = 120 // 기본값 120초
+	}
 	config := models.LLMConfig{
 		Host:            host,
 		Port:            port,
@@ -647,6 +650,7 @@ func (a *App) SaveLLMConfig(host, port, model1, model2, model3 string, postsPerH
 		CommentsPerHour: commentsPerHour,
 		MaxTokens:       maxTokens,
 		Temperature:     temperature,
+		Timeout:         timeout,
 	}
 	a.llmService.UpdateConfig(config)
 	a.activityManager.SetActivityRate(postsPerHour, commentsPerHour)
@@ -656,10 +660,10 @@ func (a *App) SaveLLMConfig(host, port, model1, model2, model3 string, postsPerH
 	if db != nil {
 		_, err := db.Exec(`INSERT OR REPLACE INTO settings (key_name, value) VALUES 
 			('llm_host', ?), ('llm_port', ?), ('llm_model_1', ?), ('llm_model_2', ?), ('llm_model_3', ?),
-			('posts_per_hour', ?), ('comments_per_hour', ?), ('max_tokens', ?), ('temperature', ?)`,
+			('posts_per_hour', ?), ('comments_per_hour', ?), ('max_tokens', ?), ('temperature', ?), ('timeout', ?)`,
 			host, port, model1, model2, model3,
 			fmt.Sprintf("%d", postsPerHour), fmt.Sprintf("%d", commentsPerHour),
-			fmt.Sprintf("%d", maxTokens), fmt.Sprintf("%f", temperature))
+			fmt.Sprintf("%d", maxTokens), fmt.Sprintf("%f", temperature), fmt.Sprintf("%d", timeout))
 		if err != nil {
 			log.Printf("Failed to save LLM config to DB: %v", err)
 		}

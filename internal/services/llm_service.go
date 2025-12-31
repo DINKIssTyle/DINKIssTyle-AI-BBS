@@ -73,6 +73,7 @@ func NewLLMService() *LLMService {
 			CommentsPerHour: 10,
 			MaxTokens:       4000,
 			Temperature:     0.8,
+			Timeout:         120,
 		},
 		client: &http.Client{
 			Timeout: 120 * time.Second,
@@ -83,6 +84,12 @@ func NewLLMService() *LLMService {
 // UpdateConfig LLM 설정 변경
 func (s *LLMService) UpdateConfig(config models.LLMConfig) {
 	s.config = config
+	// HTTP 클라이언트 타임아웃 업데이트
+	timeout := config.Timeout
+	if timeout <= 0 {
+		timeout = 120
+	}
+	s.client.Timeout = time.Duration(timeout) * time.Second
 }
 
 // GetConfig 현재 설정 반환

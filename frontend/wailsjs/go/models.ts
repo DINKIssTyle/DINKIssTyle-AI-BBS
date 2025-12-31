@@ -157,6 +157,7 @@ export namespace models {
 	    comments_per_hour: number;
 	    max_tokens: number;
 	    temperature: number;
+	    timeout: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new LLMConfig(source);
@@ -173,6 +174,7 @@ export namespace models {
 	        this.comments_per_hour = source["comments_per_hour"];
 	        this.max_tokens = source["max_tokens"];
 	        this.temperature = source["temperature"];
+	        this.timeout = source["timeout"];
 	    }
 	}
 	export class Post {

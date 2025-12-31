@@ -115,7 +115,7 @@ export function SaveCharacterRefValue(arg1:string,arg2:string):Promise<void>;
 
 export function SaveGenSettings(arg1:number,arg2:number,arg3:number,arg4:boolean,arg5:boolean):Promise<void>;
 
-export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number):Promise<void>;
+export function SaveLLMConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number,arg8:number,arg9:number,arg10:number):Promise<void>;
 
 export function SaveMBTIDescription(arg1:string,arg2:string):Promise<void>;
 

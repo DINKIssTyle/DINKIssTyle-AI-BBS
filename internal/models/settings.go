@@ -35,6 +35,7 @@ type LLMConfig struct {
 	CommentsPerHour int     `json:"comments_per_hour"`
 	MaxTokens       int     `json:"max_tokens"`
 	Temperature     float64 `json:"temperature"`
+	Timeout         int     `json:"timeout"` // HTTP 요청 타임아웃 (초), 기본값 120
 }
 
 // BBSConfig 게시판 설정 (타이틀, 테마, 폰트, 푸터)

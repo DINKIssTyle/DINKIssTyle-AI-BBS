@@ -717,9 +717,10 @@ async function saveLLMConfig() {
     const commentsPerHour = parseInt($('#llm-comments').value) || 10;
     const maxTokens = parseInt($('#llm-tokens').value) || 2000;
     const temperature = parseFloat($('#llm-temp').value) || 0.8;
+    const timeout = parseInt($('#llm-timeout').value) || 120;
 
     try {
-        await go.SaveLLMConfig(host, port, model1, model2, model3, postsPerHour, commentsPerHour, maxTokens, temperature);
+        await go.SaveLLMConfig(host, port, model1, model2, model3, postsPerHour, commentsPerHour, maxTokens, temperature, timeout);
         showToast('LLM 설정이 저장되었습니다');
     } catch (e) { showToast('설정 저장 실패: ' + e, 'error'); }
 }
