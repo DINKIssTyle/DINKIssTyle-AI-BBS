@@ -148,6 +148,13 @@ async function initCharManagerMode() {
 
     // 초기 데이터 로드
     loadCharacters();
+
+    // 백엔드 로그 수신
+    if (window.runtime) {
+        window.runtime.EventsOn("debug_log", (msg) => {
+            console.log(msg);
+        });
+    }
 }
 
 // 이벤트 리스너 초기화
@@ -214,6 +221,9 @@ function initEventListeners() {
     // 웹 서버 관리
     $('#btn-start-web').addEventListener('click', startWebServer);
     $('#btn-stop-web').addEventListener('click', stopWebServer);
+
+    // 웹 설정 저장
+    $('#btn-save-web-config')?.addEventListener('click', saveWebConfig);
 
     // SSL 설정 표시 토글
     $('#web-ssl-enabled').addEventListener('change', (e) => {
@@ -330,11 +340,15 @@ function formatDate(dateStr) {
     return `${month}-${day}`;
 }
 
+// HTML 이스케이프 함수
 function escapeHtml(text) {
     if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 // 계정 함수
@@ -721,16 +735,16 @@ async function loadCharacters() {
     try {
         const chars = await go.GetAllCharacters();
         const stats = await go.GetAllCharacterStats();
-        state.cachedCharacters = chars;
-        state.cachedStats = stats;
+        state.cachedCharacters = chars || [];
+        state.cachedStats = stats || {};
         sortAndRenderCharacters();
     } catch (e) { console.log('캐릭터 로딩 실패:', e); }
 }
 
 function sortAndRenderCharacters() {
     const { field, asc } = state.characterSort;
-    const chars = [...state.cachedCharacters];
-    const stats = state.cachedStats;
+    const chars = [...(state.cachedCharacters || [])];
+    const stats = state.cachedStats || {};
 
     chars.sort((a, b) => {
         let valA, valB;
@@ -968,17 +982,37 @@ async function loadWebConfig() {
             $('#web-port').value = config.port;
             $('#web-registration').value = config.registrationOpen.toString();
             $('#web-ssl-enabled').value = config.sslEnabled.toString();
-            $('#web-ssl-cert').value = config.sslCert || '';
-            $('#web-ssl-key').value = config.sslKey || '';
+            $('#web-ssl-cert').value = config.sslCertPath || "";
+            $('#web-ssl-key').value = config.sslKeyPath || "";
 
-            const group = $('#ssl-settings-group');
-            if (group) {
-                group.style.display = config.sslEnabled ? 'block' : 'none';
+            // SSL 설정 표시 여부 초기화
+            const sslGroup = $('#ssl-settings-group');
+            if (config.sslEnabled) {
+                sslGroup.style.display = 'block';
+            } else {
+                sslGroup.style.display = 'none';
             }
 
             updateWebStatus(config.running, config.port, config.sslEnabled);
         }
-    } catch (e) { console.log('웹 설정 로드 실패', e); }
+    } catch (e) {
+        showToast('웹 서버 설정 로드 실패: ' + e, 'error');
+    }
+}
+
+async function saveWebConfig() {
+    const port = $('#web-port').value;
+    const registration = $('#web-registration').value === 'true';
+    const sslEnabled = $('#web-ssl-enabled').value === 'true';
+    const sslCert = $('#web-ssl-cert').value;
+    const sslKey = $('#web-ssl-key').value;
+
+    try {
+        await go.SaveWebServerConfig(port, registration, sslEnabled, sslCert, sslKey);
+        showToast('웹 서버 설정이 저장되었습니다');
+    } catch (e) {
+        showToast('설정 저장 실패: ' + e, 'error');
+    }
 }
 
 async function loadBBSConfig() {
@@ -1258,6 +1292,7 @@ const btnBatchDelete = $('#btn-batch-delete');
 if (btnBatchDelete) {
     btnBatchDelete.addEventListener('click', async () => {
         const ids = getSelectedCharacterIds();
+        console.log('[DEBUG] Selected character IDs:', ids);
         if (ids.length === 0) {
             showToast('선택된 캐릭터가 없습니다.', 'error');
             return;
@@ -1268,7 +1303,11 @@ if (btnBatchDelete) {
         try {
             await go.BatchDeleteCharacters(ids);
             showToast(`${ids.length}명 삭제 완료`);
-            loadCharacters();
+            // DB 갱신 반영을 위해 약간의 지연 후 로드
+            setTimeout(async () => {
+                await loadCharacters();
+                console.log('[DEBUG] Refreshed characters after delete');
+            }, 100);
         } catch (e) {
             showToast('삭제 실패: ' + e, 'error');
         }

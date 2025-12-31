@@ -5,22 +5,31 @@ package services
 import (
 	"aibbs/internal/database"
 	"aibbs/internal/models"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // CharacterService AI 캐릭터 서비스
 type CharacterService struct {
-	db *database.Database
+	db  *database.Database
+	ctx context.Context
 }
 
 // NewCharacterService 새 캐릭터 서비스 생성
 func NewCharacterService(db *database.Database) *CharacterService {
 	return &CharacterService{db: db}
+}
+
+// SetContext 컨텍스트 설정
+func (s *CharacterService) SetContext(ctx context.Context) {
+	s.ctx = ctx
 }
 
 // loadRefValues DB에서 참조값을 로드하고, 없으면 기본값 사용
@@ -32,6 +41,9 @@ func (s *CharacterService) loadRefValues(key string, defaults []string) []string
 	var value string
 	err := sqlDB.QueryRow("SELECT value FROM settings WHERE key_name = ?", "ref_"+key).Scan(&value)
 	if err != nil || value == "" {
+		if s.ctx != nil {
+			runtime.EventsEmit(s.ctx, "debug_log", fmt.Sprintf("[DEBUG] loadRefValues(%s): DB value empty, using defaults", key))
+		}
 		return defaults
 	}
 	// 쉼표로 분리
@@ -39,6 +51,7 @@ func (s *CharacterService) loadRefValues(key string, defaults []string) []string
 	result := []string{}
 	for _, item := range items {
 		trimmed := strings.TrimSpace(item)
+		trimmed = strings.Trim(trimmed, "\"'") // 따옴표 제거
 		if trimmed != "" {
 			result = append(result, trimmed)
 		}
@@ -69,6 +82,13 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 	hobbies := s.loadRefValues("hobbies", models.Hobbies)
 	regions := s.loadRefValues("regions", models.Regions)
 
+	if s.ctx != nil {
+		runtime.EventsEmit(s.ctx, "debug_log", fmt.Sprintf("[DEBUG] Loaded %d jobs, %d hobbies, %d regions", len(jobCategories), len(hobbies), len(regions)))
+		if len(jobCategories) > 0 {
+			runtime.EventsEmit(s.ctx, "debug_log", fmt.Sprintf("[DEBUG] Sample Job: %s", jobCategories[0]))
+		}
+	}
+
 	for i := 0; i < count; i++ {
 		// 모델 인덱스 할당 (1, 2, 3 순환)
 		modelIdx := (i % 3) + 1
@@ -90,6 +110,7 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 			Nickname:           nickname,
 			Gender:             genders[rng.Intn(2)],
 			Age:                rng.Intn(50) + 15, // 15~64세
+			Region:             regions[rng.Intn(len(regions))],
 			Hobby:              hobbies[rng.Intn(len(hobbies))],
 			JobCategory:        jobCategories[rng.Intn(len(jobCategories))],
 			MBTI:               models.MBTITypes[rng.Intn(len(models.MBTITypes))],

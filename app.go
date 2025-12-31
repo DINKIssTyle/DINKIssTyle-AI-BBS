@@ -123,6 +123,7 @@ func (a *App) startup(ctx context.Context) {
 	// Services 초기화
 	a.userService = services.NewUserService(a.db)
 	a.characterService = services.NewCharacterService(a.db)
+	a.characterService.SetContext(ctx)
 	a.postService = services.NewPostService(a.db, a.userService)
 	a.commentService = services.NewCommentService(a.db, a.userService)
 	a.llmService = services.NewLLMService()
@@ -1060,6 +1061,7 @@ func (a *App) SaveCharacterRefValue(key, value string) error {
 	uniqueItems := []string{}
 	for _, item := range items {
 		trimmed := strings.TrimSpace(item)
+		trimmed = strings.Trim(trimmed, "\"'") // 따옴표 자동 제거 (Foolproof)
 		if trimmed != "" && !seen[trimmed] {
 			seen[trimmed] = true
 			uniqueItems = append(uniqueItems, trimmed)
