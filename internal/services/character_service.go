@@ -229,9 +229,6 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 		birthDay := rng.Intn(28) + 1 // 간단히 1~28일
 		character.Birthdate = fmt.Sprintf("%04d-%02d-%02d", birthYear, birthMonth, birthDay)
 
-		// 지역 무작위 선택
-		character.Region = regions[rng.Intn(len(regions))]
-
 		result, err := db.Exec(`
 			INSERT INTO ai_characters (nickname, gender, age, birthdate, region, hobby, job_category, mbti, 
 				aggression_level, formality_level, roleplay_level, persona_summary, assigned_model_index, is_active,

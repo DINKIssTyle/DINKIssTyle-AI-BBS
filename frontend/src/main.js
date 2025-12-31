@@ -727,7 +727,7 @@ async function generateCharacters() {
     try {
         const chars = await go.GenerateCharacters(count);
         showToast(`${chars.length}명의 캐릭터가 생성되었습니다`);
-        renderCharacters(chars);
+        loadCharacters();
     } catch (e) { showToast('캐릭터 생성 실패: ' + e, 'error'); }
 }
 

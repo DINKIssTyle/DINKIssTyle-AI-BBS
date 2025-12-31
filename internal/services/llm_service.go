@@ -102,6 +102,7 @@ type ChatRequest struct {
 	Messages    []ChatMessage `json:"messages"`
 	Temperature float64       `json:"temperature"`
 	MaxTokens   int           `json:"max_tokens"`
+	Seed        *int          `json:"seed,omitempty"`
 }
 
 // ChatResponse OpenAI API 응답 형식
@@ -313,14 +314,22 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 		temperature = 0.8
 	}
 
+	// 랜덤 시드 생성 (캐싱 방지 및 다양성 확보)
+	seedVal := int(time.Now().UnixNano() % 2147483647)
+
+	// 시스템 메시지에 Randomizer 주입 (일부 모델은 Seed 파라미터를 무시하므로 프롬프트에도 명시)
+	sysContent := s.getPromptWithDefault("system_role", models.DefaultSystemRole)
+	sysContent = fmt.Sprintf("%s\n\n[System Note: Randomizer ID %d]", sysContent, seedVal)
+
 	reqBody := ChatRequest{
 		Model: modelName,
 		Messages: []ChatMessage{
-			{Role: "system", Content: s.getPromptWithDefault("system_role", models.DefaultSystemRole)},
+			{Role: "system", Content: sysContent},
 			{Role: "user", Content: prompt},
 		},
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
+		Seed:        &seedVal,
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
