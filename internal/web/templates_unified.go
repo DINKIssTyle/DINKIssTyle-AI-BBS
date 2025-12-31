@@ -649,7 +649,11 @@ const writeTemplateUnified = `<!DOCTYPE html>
                 {{end}}
                 <div class="form-actions">
                     <button type="submit" class="btn">{{if .Post}}수정하기{{else}}글쓰기{{end}}</button>
-                    <button type="button" class="btn btn-outline" onclick="if(confirm('정말 글쓰기를 취소하시겠습니까?')) history.back();">취소</button>
+                    {{if .Post}}
+                    <a href="/post/{{.Post.ID}}" class="btn btn-outline" onclick="return confirm('수정을 취소하시겠습니까?');">취소</a>
+                    {{else}}
+                    <a href="/" class="btn btn-outline" onclick="return confirm('글쓰기를 취소하시겠습니까?');">취소</a>
+                    {{end}}
                 </div>
             </form>
         </div>
