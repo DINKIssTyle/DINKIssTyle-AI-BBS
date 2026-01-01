@@ -588,12 +588,11 @@ func (m *ActivityManager) checkAndGeneratePersona(character *models.AICharacter)
 		shouldGenerate = true
 		log.Printf("인격 최초 생성 시작: [%s] (글 %d, 댓글 %d)\n", character.Nickname, postCount, commentCount)
 	} else if hasPersona {
-		// 갱신 조건: 마지막 갱신 이후 활동량이 3개 이상 증가했을 때
-		// 간단히 6, 12, 24... 매 3회마다 갱신 (확률적으로)
-		// 6, 9, 12, 15... 등 3의 배수마다 갱신 기회
-		if totalActivity >= 6 && totalActivity%3 == 0 {
+		// 갱신 조건: 처음 이후에는 게시글+댓글 10회 사이클로 갱신
+		// 10, 20, 30...
+		if totalActivity > 0 && totalActivity%10 == 0 {
 			shouldGenerate = true
-			log.Printf("인격 갱신 시작: [%s] (글 %d, 댓글 %d, 총 %d)\n", character.Nickname, postCount, commentCount, totalActivity)
+			log.Printf("인격 갱신 시작: [%s] (글 %d, 댓글 %d, 총 %d - 10회 누적)\n", character.Nickname, postCount, commentCount, totalActivity)
 		}
 	}
 

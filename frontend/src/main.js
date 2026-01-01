@@ -896,9 +896,19 @@ function renderCharacters(chars, stats = {}) {
                          id="avatar-preview-${c.id}">
                     <select data-field="avatar_image" style="width:105px;" onchange="handleTableChange(this, 'avatar_image', ${c.id})">
                         <option value="">(없음)</option>
-                        ${(state.avatarCache[c.gender === '남성' ? 'male' : 'female'] || []).map(img =>
-            `<option value="${img}" ${c.avatar_image === img ? 'selected' : ''}>${img}</option>`
-        ).join('')}
+                        ${(function () {
+                const genderKey = c.gender === '남성' ? 'male' : 'female';
+                const list = state.avatarCache[genderKey] || [];
+                // 현재 아바타가 목록에 없으면 추가 (유실 방지)
+                let optionsHtml = '';
+                if (c.avatar_image && !list.includes(c.avatar_image)) {
+                    optionsHtml += `<option value="${c.avatar_image}" selected>${c.avatar_image} (현재)</option>`;
+                }
+                optionsHtml += list.map(img =>
+                    `<option value="${img}" ${c.avatar_image === img ? 'selected' : ''}>${img}</option>`
+                ).join('');
+                return optionsHtml;
+            })()}
                     </select>
                 </div>
             </td>

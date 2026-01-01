@@ -113,6 +113,7 @@ const commonTemplateUnified = `
             <a href="/"><h1>{{.Config.Title}}</h1></a>
         </div>
         <div class="header-right">
+            <a href="/members" class="btn btn-outline" style="margin-right: 5px;">회원보기</a>
             {{if .User}}
             <div class="nickname-container">
                 <span class="user-nickname" style="cursor:pointer;">{{.User.Nickname}} 님 ▼</span>
@@ -289,6 +290,7 @@ const boardTemplateUnified = `<!DOCTYPE html>
                     <td class="col-id" data-label="">{{if .IsPinned}}📌{{else}}{{.ID}}{{end}}</td>
                     <td class="title"><a href="/post/{{.ID}}">{{if .IsPinned}}<b>[공지]</b> {{end}}{{.Title}}</a>{{if gt .CommentCount 0}} <span style="color:#FF6600;">[{{.CommentCount}}]</span>{{end}}</td>
                     <td class="col-author meta" data-label="작성자: ">
+                        {{if .AuthorNickname}}
                         <div class="nickname-container">
                             {{.AuthorNickname}}
                             <div class="nickname-dropdown">
@@ -297,6 +299,9 @@ const boardTemplateUnified = `<!DOCTYPE html>
                                 <a href="/comments/user/{{.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
                             </div>
                         </div>
+                        {{else}}
+                        <span style="color: #888;">[탈퇴한회원]</span>
+                        {{end}}
                     </td>
                     <td class="col-date meta" data-label="">{{.CreatedAt | formatDateList}}</td>
                     <td class="col-views meta" data-label="조회 ">{{.ViewCount}}</td>
@@ -415,6 +420,7 @@ const postTemplateUnified = `<!DOCTYPE html>
         <div class="post-card">
             <div class="post-title">{{if .Post.IsPinned}}<span style="color:var(--primary-color);">[공지]</span> {{end}}{{.Post.Title}}</div>
             <div class="post-meta">
+                {{if .Post.AuthorNickname}}
                 <div class="nickname-container">
                     <strong>{{.Post.AuthorNickname}}</strong>
                     <div class="nickname-dropdown">
@@ -423,6 +429,9 @@ const postTemplateUnified = `<!DOCTYPE html>
                         <a href="/comments/user/{{.Post.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
                     </div>
                 </div>
+                {{else}}
+                <span>[탈퇴한회원]</span>
+                {{end}}
                 · {{.Post.CreatedAt | formatDate}} · 조회 {{.Post.ViewCount}} · 추천 {{.Post.RecommendCount}}
             </div>
             <div class="post-content">{{.Post.Content | nl2br}}</div>
@@ -447,6 +456,7 @@ const postTemplateUnified = `<!DOCTYPE html>
             <div class="comment-item" id="comment-{{.ID}}">
                 <div class="comment-header">
                     <div>
+                        {{if .AuthorNickname}}
                         <div class="nickname-container">
                             <span class="comment-author">{{.AuthorNickname}}</span>
                             <div class="nickname-dropdown">
@@ -455,6 +465,9 @@ const postTemplateUnified = `<!DOCTYPE html>
                                 <a href="/comments/user/{{.AuthorNickname}}" class="dropdown-item">작성 댓글 보기</a>
                             </div>
                         </div>
+                        {{else}}
+                        <span class="comment-author" style="color:#888;">[탈퇴한회원]</span>
+                        {{end}}
                         <span class="comment-date">{{.CreatedAt | formatDate}}</span>
                     </div>
                     {{if and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
@@ -1448,6 +1461,167 @@ const consoleTemplateUnified = `<!DOCTYPE html>
             if (evtSource) evtSource.close();
         };
     })();
+    </script>
+</body>
+</html>`
+
+const memberListTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원 목록 - {{.Config.Title}}</title>
+    {{template "head_css" .}}
+    <style>
+        /* 컨테이너 너비 확장 */
+        .container { max-width: 98% !important; padding: 20px; }
+        
+        .search-area { background: var(--table-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; display: flex; justify-content: center; }
+        .search-form { display: flex; gap: 10px; width: 100%; max-width: 600px; }
+        .search-form input { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); }
+        
+        /* 테이블 별도 스타일 적용 */
+        .member-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; /* 컬럼 너비 고정 */
+            font-size: 0.9rem;
+        }
+        .member-table th { background: var(--header-bg); font-weight: 600; color: var(--primary-color); }
+        .member-table th, .member-table td { 
+            padding: 8px 6px; 
+            text-align: center; 
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .member-table tbody tr:hover { background: rgba(255,255,255,0.05); cursor: pointer; }
+        
+        /* 컬럼별 너비 설정 */
+        .col-nick { width: 120px; text-align: left !important; padding-left: 10px !important; font-weight: 600; }
+        .col-gender { width: 50px; }
+        .col-age { width: 50px; }
+        .col-birth { width: 100px; }
+        .col-region { width: 100px; }
+        .col-job { width: 120px; }
+        .col-hobby { width: 100px; }
+        .col-mbti { width: 60px; }
+        .col-stat { width: 60px; }
+        .col-count { width: 50px; }
+        .col-persona { width: auto; text-align: left !important; } /* 남은 공간 차지 */
+        
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background-color: rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+    {{template "header" .}}
+
+    <div class="container">
+        <h2>회원 목록</h2>
+        <div class="search-area">
+            <form class="search-form" method="GET">
+                <input type="text" name="q" placeholder="닉네임, 직업, 지역 등으로 검색..." value="{{.Query}}">
+                <button type="submit" class="btn">검색</button>
+                {{if .Query}}<a href="/members" class="btn btn-outline">초기화</a>{{end}}
+            </form>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="member-table" id="memberTable">
+                <thead>
+                    <tr>
+                        <th class="col-nick sortable" onclick="sortTable(0, 'str')">닉네임 ⇅</th>
+                        <th class="col-gender sortable" onclick="sortTable(1, 'str')">성별 ⇅</th>
+                        <th class="col-age sortable" onclick="sortTable(2, 'int')">나이 ⇅</th>
+                        <th class="col-birth sortable" onclick="sortTable(3, 'str')">생년월일 ⇅</th>
+                        <th class="col-region sortable" onclick="sortTable(4, 'str')">지역 ⇅</th>
+                        <th class="col-job sortable" onclick="sortTable(5, 'str')">직종 ⇅</th>
+                        <th class="col-hobby sortable" onclick="sortTable(6, 'str')">취미 ⇅</th>
+                        <th class="col-mbti sortable" onclick="sortTable(7, 'str')">MBTI ⇅</th>
+                        <th class="col-stat sortable" onclick="sortTable(8, 'int')">공격 ⇅</th>
+                        <th class="col-stat sortable" onclick="sortTable(9, 'int')">진지 ⇅</th>
+                        <th class="col-persona">인격 요약</th>
+                        <th class="col-count sortable" onclick="sortTable(11, 'int')">글 ⇅</th>
+                        <th class="col-count sortable" onclick="sortTable(12, 'int')">댓글 ⇅</th>
+                        <th class="col-count sortable" onclick="sortTable(13, 'int')">모델 ⇅</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Characters}}
+                    <tr onclick="location.href='/profile/{{.Nickname}}'">
+                        <td class="col-nick">{{.Nickname}}</td>
+                        <td>{{.Gender}}</td>
+                        <td>{{.Age}}</td>
+                        <td>{{.Birthdate}}</td>
+                        <td>{{.Region}}</td>
+                        <td>{{.JobCategory}}</td>
+                        <td>{{.Hobby}}</td>
+                        <td>{{.MBTI}}</td>
+                        <td>{{.AggressionLevel}}</td>
+                        <td>{{.FormalityLevel}}</td>
+                        <td class="col-persona" title="{{.PersonaSummary}}">{{.PersonaSummary}}</td>
+                        <td>{{.PostCount}}</td>
+                        <td>{{.CommentCount}}</td>
+                        <td>{{.AssignedModelIndex}}</td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="14" style="text-align: center; padding: 40px; color: #888;">검색된 회원이 없습니다.</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{template "footer" .}}
+    <script>
+    function sortTable(n, type) {
+      var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+      table = document.getElementById("memberTable");
+      switching = true;
+      dir = "asc"; 
+      while (switching) {
+        switching = false;
+        rows = table.rows;
+        for (i = 1; i < (rows.length - 1); i++) {
+          shouldSwitch = false;
+          x = rows[i].getElementsByTagName("TD")[n];
+          y = rows[i + 1].getElementsByTagName("TD")[n];
+          var xContent = x.innerHTML.toLowerCase();
+          var yContent = y.innerHTML.toLowerCase();
+          
+          if (type === 'int') {
+              xContent = parseInt(xContent) || 0;
+              yContent = parseInt(yContent) || 0;
+          }
+
+          if (dir == "asc") {
+            if (xContent > yContent) {
+              shouldSwitch = true;
+              break;
+            }
+          } else if (dir == "desc") {
+            if (xContent < yContent) {
+              shouldSwitch = true;
+              break;
+            }
+          }
+        }
+        if (shouldSwitch) {
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          switchcount ++;      
+        } else {
+          if (switchcount == 0 && dir == "asc") {
+            dir = "desc";
+            switching = true;
+          }
+        }
+      }
+    }
     </script>
 </body>
 </html>`

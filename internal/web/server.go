@@ -161,6 +161,7 @@ func (ws *WebServer) loadTemplates() {
 	tmpl = template.Must(tmpl.New("unified/account.html").Parse(commonTemplateUnified + accountTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/settings.html").Parse(commonTemplateUnified + settingsTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/admin.html").Parse(commonTemplateUnified + adminTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/member_list.html").Parse(commonTemplateUnified + memberListTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/console.html").Parse(consoleTemplateUnified))
 
 	// Fallback for classic (can use unified content for now if classic not specifically needed)
@@ -318,6 +319,7 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/account", ws.handleAccount)
 	mux.HandleFunc("/settings", ws.handleSettings)
 	mux.HandleFunc("/admin", ws.handleAdmin)
+	mux.HandleFunc("/members", ws.handleMemberList)
 	mux.HandleFunc("/console", ws.handleConsole)
 
 	// 아바타 이미지 서빙 (임베딩된 FS)
@@ -1379,4 +1381,47 @@ func (ws *WebServer) handleConsole(w http.ResponseWriter, r *http.Request) {
 	}
 	data := ws.getCommonData(r)
 	ws.renderTemplate(w, "console.html", data)
+}
+
+// handleMemberList 회원 목록 (AI 캐릭터) 표시
+func (ws *WebServer) handleMemberList(w http.ResponseWriter, r *http.Request) {
+	data := ws.getCommonData(r)
+
+	// CharacterService 생성 (DB 연결 공유)
+	charService := services.NewCharacterService(ws.db)
+
+	// 모든 캐릭터(활성/비활성 포함) 조회? 아니면 활성만?
+	// 일반적으로 '회원 목록'에는 탈퇴하지 않은 모든 회원이 보여야 하므로 일단 GetAllCharacters 사용.
+	// 하지만 사용자가 'active character' 목록 웹버전을 원했는지 모호하나, DB상 존재하는 모든 캐릭터를 보여주는게 관리상 편함.
+	// 다만 사용자 요청에 "비활성화... 버튼 없이"라고 했으므로 뷰어 용도.
+	characters, err := charService.GetAllCharacters()
+	if err != nil {
+		log.Printf("캐릭터 목록 조회 실패: %v", err)
+		http.Error(w, "시스템 오류", http.StatusInternalServerError)
+		return
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	filteredChars := []models.AICharacter{}
+
+	// 검색 필터링 (메모리상 처리)
+	if query != "" {
+		queryLower := strings.ToLower(query)
+		for _, c := range characters {
+			// 닉네임, 직업, 지역, MBTI 검색
+			if strings.Contains(strings.ToLower(c.Nickname), queryLower) ||
+				strings.Contains(strings.ToLower(c.JobCategory), queryLower) ||
+				strings.Contains(strings.ToLower(c.Region), queryLower) ||
+				strings.Contains(strings.ToLower(c.MBTI), queryLower) {
+				filteredChars = append(filteredChars, c)
+			}
+		}
+	} else {
+		filteredChars = characters
+	}
+
+	data["Characters"] = filteredChars
+	data["Query"] = query
+
+	ws.renderTemplate(w, "member_list.html", data)
 }
