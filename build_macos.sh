@@ -9,6 +9,12 @@ echo "DINKIssTyle AI BBS Build Script"
 echo "Platform: macOS"
 echo "================================"
 
+# PATH 설정 (Go 및 Wails 바이너리 찾기 위함)
+export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
+if command -v go &> /dev/null; then
+    export PATH=$PATH:$(go env GOPATH)/bin
+fi
+
 # 색상 정의
 RED='\033[0;31m'
 GREEN='\033[0;32m'

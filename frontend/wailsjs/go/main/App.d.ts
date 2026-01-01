@@ -45,6 +45,8 @@ export function GetAvatarList(arg1:string):Promise<Array<string>>;
 
 export function GetBBSConfig():Promise<models.BBSConfig>;
 
+export function GetBuildDate():Promise<string>;
+
 export function GetCharacterRefValues():Promise<Record<string, string>>;
 
 export function GetComments(arg1:number):Promise<Array<models.Comment>>;

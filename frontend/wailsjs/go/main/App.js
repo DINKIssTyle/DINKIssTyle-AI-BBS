@@ -86,6 +86,10 @@ export function GetBBSConfig() {
   return window['go']['main']['App']['GetBBSConfig']();
 }
 
+export function GetBuildDate() {
+  return window['go']['main']['App']['GetBuildDate']();
+}
+
 export function GetCharacterRefValues() {
   return window['go']['main']['App']['GetCharacterRefValues']();
 }
