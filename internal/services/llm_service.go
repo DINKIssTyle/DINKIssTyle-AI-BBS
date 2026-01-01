@@ -678,7 +678,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 최근 활동입니다]
+		prompt += fmt.Sprintf(`[당신의 최근 활동입니다. 동일하거나 유사하게 글을 쓰지 마세요.]
 %s
 
 `, character.PersonaSummary)
@@ -819,7 +819,7 @@ func (s *LLMService) GenerateBackstory(character *models.AICharacter) (string, e
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 
 	prompt := fmt.Sprintf(`당신은 이제 막 커뮤니티 활동을 시작하려는 인물입니다.
-다음 설정값을 바탕으로 당신의 과거, 현재 상황, 가치관, 트라우마, 꿈 등을 포함한 풍부한 서사(Backstory)를 1000자 내외로 작성해주세요.
+다음 설정값을 바탕으로 당신의 과거, 현재 상황, 가치관, **인생의 전환점**, **소소한 행복**, 꿈 등을 포함한 풍부한 서사(Backstory)를 1000자 내외로 작성해주세요.
 이 내용은 당신의 '인격(Persona)'으로 사용될 것입니다.
 
 [캐릭터 설정]
@@ -835,6 +835,8 @@ func (s *LLMService) GenerateBackstory(character *models.AICharacter) (string, e
 2. 왜 이 커뮤니티에 오게 되었는지, 어떤 글을 쓰고 싶은지 자연스럽게 녹여내세요.
 3. 말투는 캐릭터의 성격에 맞게 설정하되, 서사 자체는 '나'의 독백이나 '제3자'의 관찰 시점 중 하나로 일관되게 작성하세요.
 4. 요약된 정보(나이, 직업 등)를 단순히 나열하지 말고 이야기 속에 녹여내세요.
+5. **균형 잡힌 톤 유지**: 너무 비극적이거나 우울한 사건에만 집중하지 마세요. 일상의 즐거움, 작은 성취, 미래에 대한 희망도 함께 서술하여 입체적인 캐릭터를 만드세요.
+6. 캐릭터의 MBTI와 성향이 밝다면 긍정적인 경험을, 진지하다면 깊이 있는 사색을 중심으로 서술하세요.
 `, character.Nickname, character.Age, character.Gender, character.Region, character.JobCategory,
 		character.Hobby, character.MBTI, mbtiDesc, character.AggressionLevel, character.FormalityLevel)
 
@@ -849,11 +851,12 @@ func (s *LLMService) GenerateBackstory(character *models.AICharacter) (string, e
 
 // GenerateActivitySummary AI 캐릭터의 최근 활동 요약 생성 (기존 GeneratePersonaSummary 대체)
 func (s *LLMService) GenerateActivitySummary(character *models.AICharacter, recentPosts []models.Post, recentComments []*models.Comment) (string, error) {
-	prompt := fmt.Sprintf(`다음은 커뮤니티 사용자의 닉네임과 최근 활동(작성한 글, 댓글) 목록입니다.
-정보를 읽고 현재 이 사용자가 어떤 관심사를 가지고 활동하고 있는지 "최근 활동 요약"을 500자 이내로 작성해주세요.
+	prompt := fmt.Sprintf(`[Role]
+당신은 커뮤니티 사용자의 활동 패턴을 분석하는 냉철한 **AI 관찰자(Observer)**입니다.
+감정을 배제하고 제3자의 시선에서 건조하게 분석 보고서를 작성하세요.
 
-[사용자 정보]
-- 닉네임: %s
+[Input Data]
+대상 사용자 닉네임: %s
 (참고: 나이, 지역, 직업, MBTI 등 고정적인 개인정보는 요약에 포함하지 마세요. 오직 최근 활동 내용에만 집중하세요.)
 
 `, character.Nickname)
@@ -888,11 +891,17 @@ func (s *LLMService) GenerateActivitySummary(character *models.AICharacter, rece
 		prompt += "[최근 작성한 댓글]\n없음\n\n"
 	}
 
-	prompt += `[지침]
-1. 사용자가 최근에 쓴 글과 댓글의 주제, 논조, 감정 상태 등을 분석하여 서술하세요.
-2. 예: "최근에는 주로 요리에 대한 글을 쓰며 회원들과 레시피를 공유하고 있다. 댓글에서는 친절한 태도를 보이지만, 특정 주제에 대해서는 단호한 모습을 보였다."
-3. 고정적인 인적사항(나이, 성별, 직업 등)은 절대 언급하지 마세요.
-4. 요약은 간결하고 명확하게 작성하세요.
+	prompt += `[Instruction]
+1. 대상이 최근에 쓴 글과 댓글의 주제, 논조, 감정 상태 등을 분석하여 서술하시오.
+2. **절대 금지사항**:
+   - 편지 형식을 사용하지 마시오. (예: "안녕하세요 세라님...", "운영자입니다..." 금지)
+   - 인사말을 하지 마시오.
+   - 대상에게 말을 걸지 마시오.
+3. **작성 스타일**:
+   - "~함", "~임", "~하고 있음" 등의 보고서체나 평어체, 또는 건조한 서술형 문체를 사용하시오.
+   - 제3자(관찰자) 시점을 유지하시오.
+4. 예시: "최근 요리에 대한 글을 주로 작성하며 회원들과 레시피를 공유함. 댓글에서는 친절하지만 특정 주제에 대해서는 단호한 태도를 보임. 전반적으로 차분하고 가정적인 성향이 드러남."
+5. 분량: 300자 이내로 핵심만 요약하시오.
 `
 
 	modelName := s.selectModel(character.AssignedModelIndex)
