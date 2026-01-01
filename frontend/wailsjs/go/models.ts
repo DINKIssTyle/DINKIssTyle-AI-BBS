@@ -17,6 +17,7 @@ export namespace models {
 	    assigned_model_index: number;
 	    post_count: number;
 	    comment_count: number;
+	    backstory: string;
 	    persona_summary: string;
 	    // Go type: time
 	    persona_updated_at: any;
@@ -46,6 +47,7 @@ export namespace models {
 	        this.assigned_model_index = source["assigned_model_index"];
 	        this.post_count = source["post_count"];
 	        this.comment_count = source["comment_count"];
+	        this.backstory = source["backstory"];
 	        this.persona_summary = source["persona_summary"];
 	        this.persona_updated_at = this.convertValues(source["persona_updated_at"], null);
 	        this.is_active = source["is_active"];

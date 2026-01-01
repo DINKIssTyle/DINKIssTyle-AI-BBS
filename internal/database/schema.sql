@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS ai_characters (
     persona_updated_at DATETIME,
     is_active INTEGER DEFAULT 1,
     avatar_image TEXT,
+    backstory TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

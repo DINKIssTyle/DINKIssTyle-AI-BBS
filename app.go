@@ -163,6 +163,16 @@ func (a *App) startup(ctx context.Context) {
 	// DB에서 LLM 설정 로드
 	a.loadLLMConfigFromDB()
 
+	// 프롬프트 로그 설정 로드
+	if db := a.db.GetDB(); db != nil {
+		var val string
+		if err := db.QueryRow("SELECT value FROM settings WHERE key_name = 'log_prompts'").Scan(&val); err == nil {
+			a.llmService.SetLogPrompts(val == "true")
+		} else {
+			// 기본값 true 유지
+		}
+	}
+
 	// DB 마이그레이션 (컬럼 추가)
 	a.migrateDatabase()
 
@@ -171,7 +181,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// 웹 서버 초기화
 	fmt.Println("[DEBUG] Initializing WebServer...")
-	a.webServer = web.NewWebServer(a.db, a.userService, a.postService, a.commentService)
+	a.webServer = web.NewWebServer(a.db, a.userService, a.postService, a.commentService, a.llmService)
 	a.logWriter.webServer = a.webServer // 로거에 웹 서버 연결
 	fmt.Println("[DEBUG] WebServer initialized")
 	a.loadWebConfigFromDB() // Added loading here
@@ -642,6 +652,24 @@ func (a *App) GetMBTITypes() []string {
 // TestLLMConnection LLM 연결 테스트
 func (a *App) TestLLMConnection(host, port, model string) error {
 	return a.llmService.TestConnection(host, port, model)
+}
+
+// SetLogPrompts 프롬프트 로그 설정
+func (a *App) SetLogPrompts(enabled bool) {
+	a.llmService.SetLogPrompts(enabled)
+	// DB 저장
+	if db := a.db.GetDB(); db != nil {
+		val := "false"
+		if enabled {
+			val = "true"
+		}
+		a.db.GetDB().Exec("INSERT OR REPLACE INTO settings (key_name, value) VALUES ('log_prompts', ?)", val)
+	}
+}
+
+// GetLogPrompts 프롬프트 로그 설정 조회
+func (a *App) GetLogPrompts() bool {
+	return a.llmService.LogPrompts
 }
 
 // SaveLLMConfig LLM 설정 저장

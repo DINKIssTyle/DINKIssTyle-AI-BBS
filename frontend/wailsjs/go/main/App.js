@@ -126,6 +126,10 @@ export function GetLLMConfig() {
   return window['go']['main']['App']['GetLLMConfig']();
 }
 
+export function GetLogPrompts() {
+  return window['go']['main']['App']['GetLogPrompts']();
+}
+
 export function GetMBTIDescriptions() {
   return window['go']['main']['App']['GetMBTIDescriptions']();
 }
@@ -244,6 +248,10 @@ export function SaveWebServerConfig(arg1, arg2, arg3, arg4, arg5) {
 
 export function SelectFile(arg1, arg2) {
   return window['go']['main']['App']['SelectFile'](arg1, arg2);
+}
+
+export function SetLogPrompts(arg1) {
+  return window['go']['main']['App']['SetLogPrompts'](arg1);
 }
 
 export function SetUserAdmin(arg1, arg2) {

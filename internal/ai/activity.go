@@ -297,6 +297,18 @@ func (m *ActivityManager) createRandomPost() {
 		return
 	}
 
+	// 닉네임 업데이트 체크 (서사 생성 실패 시 중단)
+	if !m.updateNicknameIfNeeded(character) {
+		log.Printf("[SKIP] 닉네임 변경에 실패하여 게시물 작성을 건너뜁니다: %s\n", character.Nickname)
+		return
+	}
+
+	// 서사 누락 체크 및 보정
+	if !m.ensureBackstory(character) {
+		log.Printf("[SKIP] 서사가 없어 게시물 작성을 건너뜁니다: %s\n", character.Nickname)
+		return
+	}
+
 	// 캐릭터의 최근 게시물 조회 (전략 4: 참조 범위 확대)
 	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 15)
 
@@ -375,6 +387,12 @@ func (m *ActivityManager) createRandomComment() {
 	// 닉네임 업데이트 체크 (서사 생성 실패 시 중단)
 	if !m.updateNicknameIfNeeded(character) {
 		log.Printf("[SKIP] 서사 생성 미완료로 댓글 작성 취소: %s", character.Nickname)
+		return
+	}
+
+	// 서사 누락 체크 및 보정
+	if !m.ensureBackstory(character) {
+		log.Printf("[SKIP] 서사가 없어 댓글 작성을 건너뜁니다: %s\n", character.Nickname)
 		return
 	}
 
@@ -630,21 +648,21 @@ func (m *ActivityManager) checkAndGeneratePersona(character *models.AICharacter)
 	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 5)
 	recentComments, _ := m.commentService.GetRecentCommentsByCharacter(character.ID, 5)
 
-	// 인격 생성/갱신
-	summary, err := m.llmService.GeneratePersonaSummary(character, recentPosts, recentComments)
+	// 인격 생성/갱신 (최근 활동 요약)
+	summary, err := m.llmService.GenerateActivitySummary(character, recentPosts, recentComments)
 	if err != nil {
-		log.Printf("인격 생성 실패: %v\n", err)
+		log.Printf("활동 요약 생성 실패: %v\n", err)
 		return
 	}
 
-	// 인격 저장
+	// 인격(활동 요약) 저장
 	err = m.characterService.UpdatePersonaSummary(character.ID, summary)
 	if err != nil {
-		log.Printf("인격 저장 실패: %v\n", err)
+		log.Printf("활동 요약 저장 실패: %v\n", err)
 		return
 	}
 
-	log.Printf("인격 생성/갱신 완료: [%s]\n", character.Nickname)
+	log.Printf("활동 요약 갱신 완료: [%s]\n", character.Nickname)
 }
 
 // updateNicknameIfNeeded "활동전AI" 닉네임 변경 (성공 여부 반환)
@@ -677,14 +695,14 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 			log.Printf("초기 인격 서사 생성 시작: %s\n", newNickname)
 			backstory, bErr := m.llmService.GenerateBackstory(character)
 			if bErr == nil {
-				character.PersonaSummary = backstory
-				if uErr := m.characterService.UpdatePersonaSummary(character.ID, backstory); uErr != nil {
-					log.Printf("초기 인격 저장 실패: %v\n", uErr)
+				character.Backstory = backstory
+				if uErr := m.characterService.UpdateCharacter(*character); uErr != nil {
+					log.Printf("초기 서사 저장 실패: %v\n", uErr)
 				} else {
-					log.Printf("초기 인격 생성 완료: %s\n", newNickname)
+					log.Printf("초기 서사 생성 완료 (Backstory): %s\n", newNickname)
 				}
 			} else {
-				log.Printf("초기 인격 생성 실패: %v\n", bErr)
+				log.Printf("초기 서사 생성 실패: %v\n", bErr)
 			}
 
 			// 실패 시 false 반환 (활동 중단)
@@ -697,7 +715,6 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 			break
 		}
 
-		// 실패 시 (중복 등) 로그 남기고 재시도
 		log.Printf("닉네임 변경 실패 (중복 등, 시도 %d/3): %s -> %s (%v)\n", i+1, oldNickname, newNickname, err)
 
 		// 실패한 닉네임 목록에 추가
@@ -715,6 +732,34 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 		return false
 	}
 
+	return true
+}
+
+// ensureBackstory 서사가 없는 캐릭터의 서사를 생성 (성공 여부 반환)
+func (m *ActivityManager) ensureBackstory(character *models.AICharacter) bool {
+	// 이미 서사가 있으면 성공
+	if character.Backstory != "" {
+		return true
+	}
+	// 활동전 AI는 닉네임 변경 시점에 생성하므로 스킵 (여기서는 패스)
+	if strings.HasPrefix(character.Nickname, "활동전AI") {
+		return true
+	}
+
+	log.Printf("누락된 서사 발견, 생성 시도: %s\n", character.Nickname)
+	backstory, err := m.llmService.GenerateBackstory(character)
+	if err != nil {
+		log.Printf("서사 생성 실패: %v\n", err)
+		return false
+	}
+
+	character.Backstory = backstory
+	if err := m.characterService.UpdateCharacter(*character); err != nil {
+		log.Printf("서사 저장 실패: %v\n", err)
+		return false
+	}
+
+	log.Printf("서사 보정 완료: %s\n", character.Nickname)
 	return true
 }
 

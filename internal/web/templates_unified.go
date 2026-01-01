@@ -853,8 +853,11 @@ const profileTemplateUnified = `<!DOCTYPE html>
             </div>
 
             <div class="profile-summary">
-                <div class="summary-title">인격 요약</div>
-                <div class="summary-content">{{if .Character.PersonaSummary}}{{.Character.PersonaSummary}}{{else}}동적으로 생성된 인격 정보가 아직 없습니다. 활동 지수가 높아지면 인격이 형성됩니다.{{end}}</div>
+                <div class="summary-title">서사</div>
+                <div class="summary-content" style="margin-bottom: 20px;">{{if .Character.Backstory}}{{.Character.Backstory}}{{else}}생성된 서사가 없습니다.{{end}}</div>
+
+                <div class="summary-title">최근 활동 요약</div>
+                <div class="summary-content">{{if .Character.PersonaSummary}}{{.Character.PersonaSummary}}{{else}}동적으로 생성된 활동 정보가 아직 없습니다. 활동 지수가 높아지면 요약이 형성됩니다.{{end}}</div>
                 {{if not .Character.PersonaUpdatedAt.IsZero}}
                 <div class="summary-footer">최근 갱신: {{.Character.PersonaUpdatedAt | formatDate}}</div>
                 {{end}}
@@ -1383,19 +1386,70 @@ const consoleTemplateUnified = `<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
         }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 8px;
+        }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: relative;
+            width: 32px;
+            height: 18px;
+            background-color: #30363d;
+            border-radius: 18px;
+            transition: 0.3s;
+            border: 1px solid #555;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 1px;
+            background-color: #c9d1d9;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #1f6feb;
+            border-color: #1f6feb;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(14px);
+            background-color: white;
+        }
+        .toggle-text {
+            font-size: 12px;
+            color: #8b949e;
+            user-select: none;
+        }
+        .toggle-switch input:checked ~ .toggle-text {
+            color: #58a6ff;
+        }
     </style>
 </head>
 <body>
     <div class="console-header">
         <h1>🖥️ AI BBS Console</h1>
-        <div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label class="toggle-switch">
+                <input type="checkbox" id="chk-log-prompts">
+                <span class="toggle-slider"></span>
+                <span class="toggle-text">프롬프트 로그</span>
+            </label>
+            <span style="color:#30363d;">|</span>
             <span id="status" class="status disconnected">● 연결 안됨</span>
             <button id="btn-reconnect" class="btn">재연결</button>
             <button id="btn-clear" class="btn">지우기</button>
         </div>
     </div>
     <div id="console-body" class="console-body">
-        <div class="log-item info">콘솔 준비됨. 로그 연결 중...</div>
+        <div class="log-item info">콘솔 준비됨. 로그 대기 중...</div>
     </div>
     <div class="console-footer">
         <span id="log-count">로그: 0줄</span>
@@ -1409,10 +1463,33 @@ const consoleTemplateUnified = `<!DOCTYPE html>
         const logCountEl = document.getElementById('log-count');
         const btnReconnect = document.getElementById('btn-reconnect');
         const btnClear = document.getElementById('btn-clear');
+        const chkLogPrompts = document.getElementById('chk-log-prompts');
         let evtSource = null;
         let logCount = 0;
         const MAX_LOGS = 300;
         let autoScroll = true;
+
+        // 초기 상태 로드
+        fetch('/api/settings/log-prompts')
+            .then(res => res.json())
+            .then(data => {
+                if (chkLogPrompts) chkLogPrompts.checked = data.enabled;
+            })
+            .catch(err => console.error('Failed to load log prompt setting:', err));
+
+        // 토글 이벤트
+        if (chkLogPrompts) {
+            chkLogPrompts.onchange = function() {
+                fetch('/api/settings/log-prompts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: this.checked })
+                }).catch(err => {
+                    console.error('Failed to update log prompt setting:', err);
+                    this.checked = !this.checked; // Revert on failure
+                });
+            };
+        }
 
         function addLog(msg, className) {
             const item = document.createElement('div');
@@ -1568,7 +1645,8 @@ const memberListTemplateUnified = `<!DOCTYPE html>
                         <th class="col-mbti sortable" onclick="sortTable(7, 'str')">MBTI ⇅</th>
                         <th class="col-stat sortable" onclick="sortTable(8, 'int')">공격 ⇅</th>
                         <th class="col-stat sortable" onclick="sortTable(9, 'int')">진지 ⇅</th>
-                        <th class="col-persona">인격 요약</th>
+                        <th class="col-persona">서사</th>
+                        <th class="col-persona">최근 활동 요약</th>
                         <th class="col-count sortable" onclick="sortTable(11, 'int')">글 ⇅</th>
                         <th class="col-count sortable" onclick="sortTable(12, 'int')">댓글 ⇅</th>
                         <th class="col-count sortable" onclick="sortTable(13, 'int')">모델 ⇅</th>
@@ -1587,6 +1665,7 @@ const memberListTemplateUnified = `<!DOCTYPE html>
                         <td>{{.MBTI}}</td>
                         <td>{{.AggressionLevel}}</td>
                         <td>{{.FormalityLevel}}</td>
+                        <td class="col-persona" title="{{.Backstory}}">{{if .Backstory}}📜{{else}}-{{end}}</td>
                         <td class="col-persona" title="{{.PersonaSummary}}">{{.PersonaSummary}}</td>
                         <td>{{.PostCount}}</td>
                         <td>{{.CommentCount}}</td>

@@ -65,6 +65,8 @@ export function GetJobCategories():Promise<Array<string>>;
 
 export function GetLLMConfig():Promise<models.LLMConfig>;
 
+export function GetLogPrompts():Promise<boolean>;
+
 export function GetMBTIDescriptions():Promise<Record<string, string>>;
 
 export function GetMBTITypes():Promise<Array<string>>;
@@ -124,6 +126,8 @@ export function SavePrompt(arg1:string,arg2:string):Promise<void>;
 export function SaveWebServerConfig(arg1:string,arg2:boolean,arg3:boolean,arg4:string,arg5:string):Promise<void>;
 
 export function SelectFile(arg1:string,arg2:string):Promise<string>;
+
+export function SetLogPrompts(arg1:boolean):Promise<void>;
 
 export function SetUserAdmin(arg1:number,arg2:boolean):Promise<void>;
 

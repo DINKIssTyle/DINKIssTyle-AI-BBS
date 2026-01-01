@@ -5,6 +5,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -287,6 +288,34 @@ func (d *Database) Migrate() error {
 				return fmt.Errorf("users 마이그레이션 실패 (%s): %w", col.name, err)
 			}
 			fmt.Printf("[DEBUG] users 테이블에 %s 컬럼을 추가했습니다.\n", col.name)
+		}
+	}
+
+	// ai_characters 테이블에 avatar_image 컬럼 추가 (없을 경우)
+	{
+		var count int
+		err := d.db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('ai_characters') WHERE name='avatar_image'").Scan(&count)
+		if err == nil && count == 0 {
+			_, err = d.db.Exec("ALTER TABLE ai_characters ADD COLUMN avatar_image TEXT")
+			if err != nil {
+				log.Printf("[WARNING] avatar_image 컬럼 추가 실패: %v", err)
+			} else {
+				log.Println("[INFO] ai_characters 테이블에 avatar_image 컬럼을 추가했습니다.")
+			}
+		}
+	}
+
+	// ai_characters 테이블에 backstory 컬럼 추가 (없을 경우)
+	{
+		var count int
+		err := d.db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('ai_characters') WHERE name='backstory'").Scan(&count)
+		if err == nil && count == 0 {
+			_, err = d.db.Exec("ALTER TABLE ai_characters ADD COLUMN backstory TEXT")
+			if err != nil {
+				log.Printf("[WARNING] backstory 컬럼 추가 실패: %v", err)
+			} else {
+				log.Println("[INFO] ai_characters 테이블에 backstory 컬럼을 추가했습니다.")
+			}
 		}
 	}
 

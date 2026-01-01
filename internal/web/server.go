@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -31,6 +32,7 @@ type WebServer struct {
 	userService    *services.UserService
 	postService    *services.PostService
 	commentService *services.CommentService
+	llmService     *services.LLMService // LLM 서비스 추가
 
 	server           *http.Server
 	templates        *template.Template
@@ -48,13 +50,14 @@ type WebServer struct {
 }
 
 // NewWebServer 새 웹 서버 생성
-func NewWebServer(db *database.Database, userService *services.UserService, postService *services.PostService, commentService *services.CommentService) *WebServer {
+func NewWebServer(db *database.Database, userService *services.UserService, postService *services.PostService, commentService *services.CommentService, llmService *services.LLMService) *WebServer {
 	fmt.Println("[DEBUG] NewWebServer called")
 	ws := &WebServer{
 		db:               db,
 		userService:      userService,
 		postService:      postService,
 		commentService:   commentService,
+		llmService:       llmService,
 		port:             "8080",
 		registrationOpen: true,
 		// 기본 설정
@@ -321,6 +324,7 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/admin", ws.handleAdmin)
 	mux.HandleFunc("/members", ws.handleMemberList)
 	mux.HandleFunc("/console", ws.handleConsole)
+	mux.HandleFunc("/api/settings/log-prompts", ws.handleLogPrompts) // Log Toggle API
 
 	// 아바타 이미지 서빙 (임베딩된 FS)
 	avatarFS := http.FileServer(http.FS(assets.GetAvatarFS()))
@@ -937,11 +941,11 @@ func (ws *WebServer) handleUserProfile(w http.ResponseWriter, r *http.Request) {
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, COALESCE(birthdate, ''), COALESCE(region, ''),
 		       hobby, job_category, mbti, aggression_level, formality_level, roleplay_level,
-		       COALESCE(persona_summary, ''), persona_updated_at, created_at, COALESCE(avatar_image, '')
+		       COALESCE(persona_summary, ''), persona_updated_at, created_at, COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters WHERE nickname = ?
 	`, nickname).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
-		&c.PersonaSummary, &personaUpdatedAt, &c.CreatedAt, &c.AvatarImage)
+		&c.PersonaSummary, &personaUpdatedAt, &c.CreatedAt, &c.AvatarImage, &c.Backstory)
 
 	if err != nil {
 		log.Printf("[DEBUG] handleUserProfile: AI character query failed for '%s': %v", nickname, err)
@@ -1408,4 +1412,42 @@ func (ws *WebServer) handleMemberList(w http.ResponseWriter, r *http.Request) {
 	data["Query"] = query
 
 	ws.renderTemplate(w, "member_list.html", data)
+}
+
+// handleLogPrompts 프롬프트 로그 토글 API
+func (ws *WebServer) handleLogPrompts(w http.ResponseWriter, r *http.Request) {
+	// GET: 현재 상태 등 (필요시)
+	// POST: 상태 변경
+	if r.Method == "POST" {
+		var req struct {
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		ws.llmService.SetLogPrompts(req.Enabled)
+
+		// DB에 설정 저장
+		db := ws.db.GetDB()
+		if db != nil {
+			val := "false"
+			if req.Enabled {
+				val = "true"
+			}
+			_, err := db.Exec("INSERT OR REPLACE INTO settings (key_name, value) VALUES ('log_prompts', ?)", val)
+			if err != nil {
+				log.Printf("Failed to save log_prompts setting: %v", err)
+			}
+		}
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]bool{"enabled": req.Enabled})
+		return
+	}
+
+	// GET request
+	enabled := ws.llmService.LogPrompts
+	json.NewEncoder(w).Encode(map[string]bool{"enabled": enabled})
 }

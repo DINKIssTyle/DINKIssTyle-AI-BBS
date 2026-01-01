@@ -137,7 +137,81 @@ body {
     /* 매트릭스 느낌의 연두색 */
     line-height: 1.4;
     white-space: pre-wrap;
+    color: #00FF41;
+    line-height: 1.4;
+    white-space: pre-wrap;
     word-break: break-all;
+}
+
+/* 로그 뷰어 헤더 & 토글 스위치 */
+.log-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #001122;
+    padding: 5px 10px;
+    border-bottom: 1px solid #336699;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+.log-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: bold;
+}
+
+/* 토글 스위치 */
+.toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 8px;
+}
+
+.toggle-switch input {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    background-color: #333;
+    border-radius: 18px;
+    transition: 0.3s;
+    border: 1px solid #555;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 1px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.toggle-switch input:checked+.toggle-slider:before {
+    transform: translateX(14px);
+}
+
+.toggle-text {
+    font-size: 12px;
+    color: #aaa;
+    user-select: none;
+}
+
+.toggle-switch input:checked~.toggle-text {
+    color: var(--accent-color);
 }
 
 #log-viewer::-webkit-scrollbar {

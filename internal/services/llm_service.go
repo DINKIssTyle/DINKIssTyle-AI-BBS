@@ -29,7 +29,18 @@ type LLMService struct {
 	promptGetter func(key string) string
 	mbtiGetter   func(mbti string) string
 
-	queueSize int32 // 현재 대기열 크기 (원자적 연산)
+	queueSize  int32 // 현재 대기열 크기 (원자적 연산)
+	LogPrompts bool  // 프롬프트 전체 로그 출력 여부
+}
+
+// SetLogPrompts 프롬프트 로그 출력 여부 설정
+func (s *LLMService) SetLogPrompts(enabled bool) {
+	s.LogPrompts = enabled
+	if enabled {
+		log.Println("[LLM] 프롬프트 전체 로그 출력: ON")
+	} else {
+		log.Println("[LLM] 프롬프트 전체 로그 출력: OFF")
+	}
 }
 
 // SetPromptGetters 프롬프트 조회 함수 설정
@@ -105,6 +116,7 @@ func NewLLMService() *LLMService {
 		client: &http.Client{
 			Timeout: 120 * time.Second,
 		},
+		LogPrompts: true, // 기본값: 켜짐
 	}
 }
 
@@ -421,7 +433,11 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 	defer s.requestMu.Unlock()
 
 	log.Printf("[LLM] 요청 시작 (모델: %s, 현재 대기열: %d)\n", modelName, currentQueue)
-	log.Printf("[LLM PROMPT] ==================================================\n%s\n==================================================\n", prompt)
+	if s.LogPrompts {
+		log.Printf("[LLM PROMPT] ==================================================\n%s\n==================================================\n", prompt)
+	} else {
+		log.Printf("[LLM PROMPT] (Hidden - Toggle in Console to view full prompt)\n")
+	}
 
 	url := fmt.Sprintf("http://%s:%s/v1/chat/completions", s.config.Host, s.config.Port)
 
@@ -478,6 +494,10 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("응답 읽기 실패: %w", err)
+	}
+
+	if s.LogPrompts {
+		log.Printf("[LLM RESPONSE RAW] %s\n", string(body))
 	}
 
 	var chatResp ChatResponse
@@ -644,18 +664,21 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 	}
 
 	prompt := fmt.Sprintf(`당신의 닉네임은 %s입니다.
-당신은 %d세 %s으로 %s에 거주하며, 취미는 %s, 직종은 %s입니다.
-글작성 스타일은 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
+당신은 %s %d세 %s입니다.
+당신이 살아온 인생: %s
+
+당신의 글작성 스타일은 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
 참고로 현재는 %s, %s 입니다.
 
 %s
-`, character.Nickname, character.Age, character.Gender, character.Region, character.Hobby,
-		character.JobCategory, mbtiDesc, character.AggressionLevel,
-		character.FormalityLevel, monthStr, timeStr, topicInstruction)
+`, character.Nickname, character.Birthdate, character.Age, character.Gender,
+		character.Backstory,
+		mbtiDesc, character.AggressionLevel, character.FormalityLevel,
+		monthStr, timeStr, topicInstruction)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신이 글 작성시 지켜야할 캐릭터]
+		prompt += fmt.Sprintf(`[당신의 최근 활동입니다]
 %s
 
 `, character.PersonaSummary)
@@ -689,10 +712,13 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 	timeStr, monthStr := getTimeContext()
 
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 커뮤니티 사용자입니다.
+당신은 %s %d세 %s입니다.
+당신이 살아온 인생(서사): %s
+
 글쓰기 스타일: %s
 댓글을 쓰는 현재 날짜와 시간은 %s, %s 입니다.
 
-`, character.Nickname, mbtiDesc, monthStr, timeStr)
+`, character.Nickname, character.Birthdate, character.Age, character.Gender, character.Backstory, mbtiDesc, monthStr, timeStr)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
@@ -821,46 +847,53 @@ func (s *LLMService) GenerateBackstory(character *models.AICharacter) (string, e
 	return strings.TrimSpace(response), nil
 }
 
-// GeneratePersonaSummary AI 캐릭터의 인격 요약 생성
-func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recentPosts []models.Post, recentComments []*models.Comment) (string, error) {
-	prompt := fmt.Sprintf(`다음은 커뮤니티 사용자의 정보와 최근 활동입니다:
+// GenerateActivitySummary AI 캐릭터의 최근 활동 요약 생성 (기존 GeneratePersonaSummary 대체)
+func (s *LLMService) GenerateActivitySummary(character *models.AICharacter, recentPosts []models.Post, recentComments []*models.Comment) (string, error) {
+	prompt := fmt.Sprintf(`다음은 커뮤니티 사용자의 닉네임과 최근 활동(작성한 글, 댓글) 목록입니다.
+정보를 읽고 현재 이 사용자가 어떤 관심사를 가지고 활동하고 있는지 "최근 활동 요약"을 500자 이내로 작성해주세요.
 
 [사용자 정보]
 - 닉네임: %s
-- 성별: %s, 나이: %d세
-- 거주지: %s
-- 취미: %s
-- 직종: %s
-- MBTI: %s
-- 공격성: %d/10, 진지함: %d/10
+(참고: 나이, 지역, 직업, MBTI 등 고정적인 개인정보는 요약에 포함하지 마세요. 오직 최근 활동 내용에만 집중하세요.)
 
-`, character.Nickname, character.Gender, character.Age, character.Region,
-		character.Hobby, character.JobCategory, character.MBTI,
-		character.AggressionLevel, character.FormalityLevel)
+`, character.Nickname)
 
 	if len(recentPosts) > 0 {
-		prompt += "[최근 작성한 글]\n"
-		for i, p := range recentPosts {
-			if i >= 5 {
+		prompt += "[최근 작성한 글 (최신순 3개)]\n"
+		count := 0
+		for _, p := range recentPosts {
+			if count >= 3 {
 				break
 			}
-			prompt += fmt.Sprintf("- %s: %s\n", p.Title, truncateString(p.Content, 100))
+			prompt += fmt.Sprintf("- 제목: %s\n  내용: %s\n", p.Title, truncateString(p.Content, 200))
+			count++
 		}
 		prompt += "\n"
+	} else {
+		prompt += "[최근 작성한 글]\n없음\n\n"
 	}
 
 	if len(recentComments) > 0 {
-		prompt += "[최근 작성한 댓글]\n"
-		for i, c := range recentComments {
-			if i >= 5 {
+		prompt += "[최근 작성한 댓글 (최신순 3개)]\n"
+		count := 0
+		for _, c := range recentComments {
+			if count >= 3 {
 				break
 			}
-			prompt += fmt.Sprintf("- %s\n", truncateString(c.Content, 100))
+			prompt += fmt.Sprintf("- 내용: %s\n", truncateString(c.Content, 200))
+			count++
 		}
 		prompt += "\n"
+	} else {
+		prompt += "[최근 작성한 댓글]\n없음\n\n"
 	}
 
-	prompt += s.getPromptWithDefault("summary_instruction", models.DefaultSummaryInstruction)
+	prompt += `[지침]
+1. 사용자가 최근에 쓴 글과 댓글의 주제, 논조, 감정 상태 등을 분석하여 서술하세요.
+2. 예: "최근에는 주로 요리에 대한 글을 쓰며 회원들과 레시피를 공유하고 있다. 댓글에서는 친절한 태도를 보이지만, 특정 주제에 대해서는 단호한 모습을 보였다."
+3. 고정적인 인적사항(나이, 성별, 직업 등)은 절대 언급하지 마세요.
+4. 요약은 간결하고 명확하게 작성하세요.
+`
 
 	modelName := s.selectModel(character.AssignedModelIndex)
 	response, err := s.sendRequest(prompt, modelName)
@@ -868,10 +901,10 @@ func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recen
 		return "", err
 	}
 
-	// 2000자 제한 (바이트가 아닌 실제 문자 수 기준)
+	// 문자 수 제한
 	runes := []rune(response)
-	if len(runes) > 2000 {
-		response = string(runes[:2000])
+	if len(runes) > 1000 {
+		response = string(runes[:1000])
 	}
 
 	return strings.TrimSpace(response), nil

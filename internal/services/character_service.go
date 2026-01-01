@@ -247,12 +247,12 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 		result, err := db.Exec(`
 			INSERT INTO ai_characters (nickname, gender, age, birthdate, region, hobby, job_category, mbti, 
 				aggression_level, formality_level, roleplay_level, persona_summary, assigned_model_index, is_active,
-				post_count, comment_count, avatar_image)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`,
+				post_count, comment_count, avatar_image, backstory)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`,
 			character.Nickname, character.Gender, character.Age, character.Birthdate, character.Region,
 			character.Hobby, character.JobCategory, character.MBTI, character.AggressionLevel,
 			character.FormalityLevel, character.RoleplayLevel, character.PersonaSummary, character.AssignedModelIndex, character.IsActive,
-			character.AvatarImage,
+			character.AvatarImage, character.Backstory,
 		)
 		if err != nil {
 			continue // 중복 등 오류 시 스킵
@@ -279,7 +279,7 @@ func (s *CharacterService) GetAllCharacters() ([]models.AICharacter, error) {
 		       hobby, job_category, mbti, 
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, '')
+		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters
 		ORDER BY id DESC
 	`)
@@ -295,7 +295,7 @@ func (s *CharacterService) GetAllCharacters() ([]models.AICharacter, error) {
 		err := rows.Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 			&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 			&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-			&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage)
+			&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage, &c.Backstory)
 		if err != nil {
 			continue
 		}
@@ -322,12 +322,12 @@ func (s *CharacterService) GetCharacter(id int) (*models.AICharacter, error) {
 		       hobby, job_category, mbti,
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, '')
+		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters WHERE id = ?
 	`, id).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 		&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage)
+		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage, &c.Backstory)
 
 	if err != nil {
 		return nil, fmt.Errorf("캐릭터 조회 실패: %w", err)
@@ -353,13 +353,13 @@ func (s *CharacterService) GetRandomActiveCharacter() (*models.AICharacter, erro
 		       hobby, job_category, mbti,
 		       aggression_level, formality_level, roleplay_level, assigned_model_index,
 		       COALESCE(post_count, 0), COALESCE(comment_count, 0), COALESCE(persona_summary, ''),
-		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, '')
+		       persona_updated_at, is_active, created_at, COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters WHERE is_active = 1
 		ORDER BY RANDOM() LIMIT 1
 	`).Scan(&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region,
 		&c.Hobby, &c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel,
 		&c.RoleplayLevel, &c.AssignedModelIndex, &c.PostCount, &c.CommentCount,
-		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage)
+		&c.PersonaSummary, &personaUpdatedAt, &c.IsActive, &c.CreatedAt, &c.AvatarImage, &c.Backstory)
 
 	if err != nil {
 		return nil, fmt.Errorf("랜덤 캐릭터 조회 실패: %w", err)
@@ -385,13 +385,13 @@ func (s *CharacterService) UpdateCharacter(character models.AICharacter) error {
 		    hobby = ?, job_category = ?, mbti = ?, 
 		    aggression_level = ?, formality_level = ?, roleplay_level = ?,
 		    persona_summary = ?, assigned_model_index = ?,
-		    is_active = ?, avatar_image = ?
+		    is_active = ?, avatar_image = ?, backstory = ?
 		WHERE id = ?`,
 		character.Nickname, character.Gender, character.Age, character.Birthdate, character.Region,
 		character.Hobby, character.JobCategory, character.MBTI,
 		character.AggressionLevel, character.FormalityLevel, character.RoleplayLevel,
 		character.PersonaSummary, character.AssignedModelIndex,
-		character.IsActive, character.AvatarImage, character.ID,
+		character.IsActive, character.AvatarImage, character.Backstory, character.ID,
 	)
 
 	if err != nil {
@@ -547,7 +547,7 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
 		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count,
-			   COALESCE(avatar_image, '')
+			   COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters 
 		WHERE nickname LIKE '활동전AI%' AND is_active = 1
 		ORDER BY RANDOM()
@@ -556,7 +556,7 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
 		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
-		&c.AvatarImage,
+		&c.AvatarImage, &c.Backstory,
 	)
 	if err != nil {
 		return nil, err // 변경 대상 없음
@@ -583,7 +583,7 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
 		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count,
-			   COALESCE(avatar_image, '')
+			   COALESCE(avatar_image, ''), COALESCE(backstory, '')
 		FROM ai_characters 
 		WHERE is_active = 1 AND (
 			(COALESCE(persona_summary, '') = '' AND (post_count + comment_count) >= 3)
@@ -597,7 +597,7 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
 		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
-		&c.AvatarImage,
+		&c.AvatarImage, &c.Backstory,
 	)
 	if err != nil {
 		return nil, err // 갱신 대상 없음

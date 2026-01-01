@@ -107,6 +107,29 @@ async function initMainMode() {
             }
         });
     }
+
+    // 프롬프트 로그 토글
+    const chkLogPrompts = $('#chk-log-prompts');
+    if (chkLogPrompts) {
+        // 초기 상태 로드
+        try {
+            const enabled = await go.GetLogPrompts();
+            chkLogPrompts.checked = enabled;
+        } catch (e) {
+            console.error("Failed to get log prompts settings:", e);
+        }
+
+        // 변경 이벤트
+        chkLogPrompts.addEventListener('change', async (e) => {
+            try {
+                await go.SetLogPrompts(e.target.checked);
+            } catch (err) {
+                console.error("Failed to set log prompts:", err);
+                // 실패 시 복구
+                e.target.checked = !e.target.checked;
+            }
+        });
+    }
 }
 
 async function initCharManagerMode() {
