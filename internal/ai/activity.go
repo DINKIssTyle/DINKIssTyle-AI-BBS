@@ -336,8 +336,14 @@ func (m *ActivityManager) createRandomComment() {
 	// AI가 글을 읽었으므로 조회수 증가
 	_ = m.postService.IncrementViewCount(post.ID)
 
-	// 글 제목에 가장 어울리는 캐릭터 선택
-	character, err := m.selectBestCharacterForPost(post)
+	// 글 작성자가 AI인 경우 ID 추출 (본인 글 댓글 방지)
+	excludeAuthorID := 0
+	if post.AuthorType == "ai" {
+		excludeAuthorID = post.AuthorID
+	}
+
+	// 글 제목에 가장 어울리는 캐릭터 선택 (글 작성자 제외)
+	character, err := m.selectBestCharacterForPost(post, excludeAuthorID)
 	if err != nil {
 		log.Printf("캐릭터 선택 실패: %v\n", err)
 		return
@@ -436,8 +442,8 @@ func (m *ActivityManager) selectPostByRecency(posts []models.Post) models.Post {
 	return posts[0]
 }
 
-// selectBestCharacterForPost 글 제목/내용에 어울리는 캐릭터 선택
-func (m *ActivityManager) selectBestCharacterForPost(post *models.Post) (*models.AICharacter, error) {
+// selectBestCharacterForPost 글 제목/내용에 어울리는 캐릭터 선택 (글 작성자 제외)
+func (m *ActivityManager) selectBestCharacterForPost(post *models.Post, excludeAuthorID int) (*models.AICharacter, error) {
 	// 활성화된 모든 캐릭터 조회
 	characters, err := m.characterService.GetActiveCharacters()
 	if err != nil || len(characters) == 0 {
@@ -445,11 +451,24 @@ func (m *ActivityManager) selectBestCharacterForPost(post *models.Post) (*models
 		return m.characterService.GetRandomActiveCharacter()
 	}
 
+	// 글 작성자 제외 (AI가 자기 글에 자기가 댓글 다는 것 방지)
+	filteredChars := make([]models.AICharacter, 0, len(characters))
+	for _, char := range characters {
+		if char.ID != excludeAuthorID {
+			filteredChars = append(filteredChars, char)
+		}
+	}
+
+	// 필터링 후 캐릭터가 없으면 원본 사용 (작성자가 유일한 경우)
+	if len(filteredChars) == 0 {
+		filteredChars = characters
+	}
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// 캐릭터 수가 적으면 랜덤 사용 (다양성 유지)
-	if len(characters) <= 3 {
-		return &characters[rng.Intn(len(characters))], nil
+	if len(filteredChars) <= 3 {
+		return &filteredChars[rng.Intn(len(filteredChars))], nil
 	}
 
 	// 키워드 기반 매칭
@@ -461,9 +480,9 @@ func (m *ActivityManager) selectBestCharacterForPost(post *models.Post) (*models
 		char  models.AICharacter
 		score float64
 	}
-	scoredChars := make([]scoredChar, len(characters))
+	scoredChars := make([]scoredChar, len(filteredChars))
 
-	for i, char := range characters {
+	for i, char := range filteredChars {
 		score := 1.0 // 기본 점수
 
 		// 직종 관련 키워드 매칭

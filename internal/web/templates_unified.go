@@ -130,84 +130,21 @@ const commonTemplateUnified = `
             {{if .RegistrationOpen}}<a href="/register" class="btn btn-outline">회원가입</a>{{end}}
             {{end}}
         </div>
-        <div id="header-log-viewer">
-            <div class="log-item">시스템 준비됨. 로그 대기 중...</div>
-        </div>
     </header>
 {{end}}
 
 {{define "footer"}}
     <footer>Powered by DINKI'ssTyle AI BBS<br>{{.Config.Footer}}</footer>
     <script>
-    // Console Toggle Logic & Lazy SSE
+    // Console Popup & Mobile Support
     document.addEventListener('DOMContentLoaded', function() {
         const btnConsole = document.getElementById('btn-console-toggle');
-        const logViewer = document.getElementById('header-log-viewer');
-        const logItemsContainer = logViewer;
-        let evtSource = null;
-
-        function connectSSE() {
-            if (evtSource || !logItemsContainer) return;
-            
-            evtSource = new EventSource("/events/logs");
-            const item = document.createElement('div');
-            item.className = 'log-item';
-            item.style.color = '#888';
-            item.innerText = "로그 서버에 연결되었습니다.";
-            logItemsContainer.appendChild(item);
-
-            evtSource.onmessage = function(event) {
-                const msg = event.data;
-                const item = document.createElement('div');
-                item.className = 'log-item';
-                item.innerText = msg;
-                logItemsContainer.appendChild(item);
-                while (logItemsContainer.children.length > 50) {
-                    logItemsContainer.removeChild(logItemsContainer.firstChild);
-                }
-                logItemsContainer.scrollTop = logItemsContainer.scrollHeight;
-            };
-            evtSource.onerror = function() {
-                if (evtSource) {
-                     evtSource.close();
-                     evtSource = null;
-                     const item = document.createElement('div');
-                     item.className = 'log-item';
-                     item.style.color = '#f88';
-                     item.innerText = "로그 서버 연결 끊김 (닫힘)";
-                     logItemsContainer.appendChild(item);
-                }
-            };
-        }
-
-        function disconnectSSE() {
-            if (evtSource) {
-                evtSource.close();
-                evtSource = null;
-                const item = document.createElement('div');
-                item.className = 'log-item';
-                item.style.color = '#888';
-                item.innerText = "로그 서버 연결 종료";
-                logItemsContainer.appendChild(item);
-            }
-        }
-
-        if (btnConsole && logViewer) {
+        
+        if (btnConsole) {
             btnConsole.addEventListener('click', function() {
-                if (logViewer.style.display === 'none' || logViewer.style.display === '') {
-                    logViewer.style.display = 'block';
-                    connectSSE();
-                } else {
-                    logViewer.style.display = 'none';
-                    disconnectSSE();
-                }
+                window.open('/console', 'AIBBSConsole', 'width=900,height=700,scrollbars=yes,resizable=yes');
             });
         }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            disconnectSSE();
-        });
 
         // Mobile Dropdown Support
         document.addEventListener('click', function(e) {
@@ -1337,5 +1274,165 @@ const adminTemplateUnified = `<!DOCTYPE html>
         </div>
     </div>
     {{template "footer" .}}
+</body>
+</html>`
+
+const consoleTemplateUnified = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI BBS Console</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .console-header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .console-header h1 {
+            font-size: 14px;
+            color: #58a6ff;
+            font-weight: normal;
+        }
+        .console-header .status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        .console-header .status.connected { color: #3fb950; }
+        .console-header .status.disconnected { color: #f85149; }
+        .btn {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn:hover { background: #30363d; }
+        .console-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-item {
+            padding: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-item.info { color: #8b949e; }
+        .log-item.error { color: #f85149; }
+        .log-item.success { color: #3fb950; }
+        .console-footer {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            padding: 8px 15px;
+            font-size: 11px;
+            color: #8b949e;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="console-header">
+        <h1>🖥️ AI BBS Console</h1>
+        <div>
+            <span id="status" class="status disconnected">● 연결 안됨</span>
+            <button id="btn-reconnect" class="btn">재연결</button>
+            <button id="btn-clear" class="btn">지우기</button>
+        </div>
+    </div>
+    <div id="console-body" class="console-body">
+        <div class="log-item info">콘솔 준비됨. 로그 연결 중...</div>
+    </div>
+    <div class="console-footer">
+        <span id="log-count">로그: 0줄</span>
+        <span>최대 300줄 | 자동 스크롤</span>
+    </div>
+
+    <script>
+    (function() {
+        const consoleBody = document.getElementById('console-body');
+        const statusEl = document.getElementById('status');
+        const logCountEl = document.getElementById('log-count');
+        const btnReconnect = document.getElementById('btn-reconnect');
+        const btnClear = document.getElementById('btn-clear');
+        let evtSource = null;
+        let logCount = 0;
+        const MAX_LOGS = 300;
+
+        function addLog(msg, className) {
+            const item = document.createElement('div');
+            item.className = 'log-item' + (className ? ' ' + className : '');
+            item.innerText = msg;
+            consoleBody.appendChild(item);
+            logCount++;
+            while (consoleBody.children.length > MAX_LOGS) {
+                consoleBody.removeChild(consoleBody.firstChild);
+                logCount--;
+            }
+            consoleBody.scrollTop = consoleBody.scrollHeight;
+            logCountEl.innerText = '로그: ' + consoleBody.children.length + '줄';
+        }
+
+        function connect() {
+            if (evtSource) evtSource.close();
+            evtSource = new EventSource('/events/logs');
+            statusEl.className = 'status connected';
+            statusEl.innerText = '● 연결됨';
+            addLog('로그 서버에 연결되었습니다.', 'success');
+
+            evtSource.onmessage = function(e) {
+                addLog(e.data);
+            };
+
+            evtSource.onerror = function() {
+                statusEl.className = 'status disconnected';
+                statusEl.innerText = '● 연결 끊김';
+                addLog('로그 서버 연결이 끊어졌습니다.', 'error');
+                if (evtSource) {
+                    evtSource.close();
+                    evtSource = null;
+                }
+            };
+        }
+
+        btnReconnect.onclick = function() {
+            addLog('재연결 시도 중...', 'info');
+            connect();
+        };
+
+        btnClear.onclick = function() {
+            consoleBody.innerHTML = '';
+            logCount = 0;
+            logCountEl.innerText = '로그: 0줄';
+            addLog('콘솔이 지워졌습니다.', 'info');
+        };
+
+        // 페이지 로드 시 자동 연결
+        connect();
+
+        // 창 닫힐 때 연결 종료
+        window.onbeforeunload = function() {
+            if (evtSource) evtSource.close();
+        };
+    })();
+    </script>
 </body>
 </html>`

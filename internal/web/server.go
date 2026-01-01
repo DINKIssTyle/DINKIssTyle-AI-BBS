@@ -161,6 +161,7 @@ func (ws *WebServer) loadTemplates() {
 	tmpl = template.Must(tmpl.New("unified/account.html").Parse(commonTemplateUnified + accountTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/settings.html").Parse(commonTemplateUnified + settingsTemplateUnified))
 	tmpl = template.Must(tmpl.New("unified/admin.html").Parse(commonTemplateUnified + adminTemplateUnified))
+	tmpl = template.Must(tmpl.New("unified/console.html").Parse(consoleTemplateUnified))
 
 	// Fallback for classic (can use unified content for now if classic not specifically needed)
 	tmpl = template.Must(tmpl.New("classic/profile.html").Parse(profileTemplateUnified))
@@ -317,6 +318,7 @@ func (ws *WebServer) Start() error {
 	mux.HandleFunc("/account", ws.handleAccount)
 	mux.HandleFunc("/settings", ws.handleSettings)
 	mux.HandleFunc("/admin", ws.handleAdmin)
+	mux.HandleFunc("/console", ws.handleConsole)
 
 	// 아바타 이미지 서빙 (임베딩된 FS)
 	avatarFS := http.FileServer(http.FS(assets.GetAvatarFS()))
@@ -1365,4 +1367,15 @@ func (ws *WebServer) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	data["Message"] = msg
 	data["Error"] = errMsg
 	ws.renderTemplate(w, "admin.html", data)
+}
+
+// handleConsole 콘솔 페이지 (팝업 창)
+func (ws *WebServer) handleConsole(w http.ResponseWriter, r *http.Request) {
+	user := ws.getSessionUser(r)
+	if user == nil || !user.IsAdmin {
+		http.Error(w, "관리자 권한이 필요합니다.", http.StatusForbidden)
+		return
+	}
+	data := ws.getCommonData(r)
+	ws.renderTemplate(w, "console.html", data)
 }

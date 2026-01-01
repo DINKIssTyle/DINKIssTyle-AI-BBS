@@ -215,6 +215,10 @@ func (s *LLMService) GeneratePostContent(character *models.AICharacter, recentPo
 		postContent.Content = response
 	}
 
+	// JSON 잔여물 정리 (", }, 줄바꿈 등)
+	postContent.Content = cleanJSONArtifacts(postContent.Content)
+	postContent.Title = strings.TrimSpace(postContent.Title)
+
 	return &postContent, nil
 }
 
@@ -419,6 +423,56 @@ func sanitizeLLMResponse(content string) string {
 	// 응답이 따옴표로 감싸진 경우 제거
 	if len(content) >= 2 && content[0] == '"' && content[len(content)-1] == '"' {
 		content = content[1 : len(content)-1]
+	}
+
+	return content
+}
+
+// cleanJSONArtifacts 본문에서 JSON 잔여물 제거 (", }, 줄바꿈 조합 등)
+func cleanJSONArtifacts(content string) string {
+	content = strings.TrimSpace(content)
+
+	// 마지막에 남은 JSON 종료 패턴들 제거 (반복 적용)
+	for {
+		trimmed := false
+		// 패턴: 줄바꿈 + } + 줄바꿈 등
+		suffixes := []string{
+			"\n}\n",
+			"\n}",
+			"}\n",
+			"\"\n}",
+			"\"}\n",
+			"\"}",
+			"\" }",
+			"}",
+			"\n\"",
+			"\"",
+		}
+		for _, suffix := range suffixes {
+			if strings.HasSuffix(content, suffix) {
+				// } 단독은 실제 내용일 수 있으므로 앞에 특수문자가 있는 경우만 제거
+				if suffix == "}" || suffix == "\"" {
+					// 바로 앞 문자 확인
+					if len(content) > 1 {
+						prevChar := content[len(content)-2]
+						if prevChar == '\n' || prevChar == ' ' || prevChar == '\t' {
+							content = content[:len(content)-len(suffix)]
+							trimmed = true
+						}
+					}
+				} else {
+					content = content[:len(content)-len(suffix)]
+					trimmed = true
+				}
+				if trimmed {
+					break
+				}
+			}
+		}
+		if !trimmed {
+			break
+		}
+		content = strings.TrimSpace(content)
 	}
 
 	return content
