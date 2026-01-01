@@ -443,8 +443,15 @@ func sanitizeLLMResponse(content string) string {
 	content = strings.ReplaceAll(content, "\\t", "\t")      // 탭
 	content = strings.ReplaceAll(content, "\\r", "")        // 캐리지 리턴 제거
 
-	// 마크다운 굵은 글씨 강조(**) 제거
+	// --- 구분자 이후 텍스트 제거 (자체 평가 멘트 등)
+	// 보통 "--- 글의 품질이..." 형태로 나타남
+	if idx := strings.Index(content, "\n---"); idx != -1 {
+		content = content[:idx]
+	}
+
+	// 마크다운 굵은 글씨 강조(**) 및 기울임(*) 제거
 	content = strings.ReplaceAll(content, "**", "")
+	content = strings.ReplaceAll(content, "*", "")
 
 	// 앞뒤 공백 및 불필요한 따옴표 제거
 	content = strings.TrimSpace(content)
