@@ -442,6 +442,8 @@ const postTemplateUnified = `<!DOCTYPE html>
                 <a href="/" class="btn btn-outline">목록으로</a>
                 {{if .IsAuthor}}
                 <a href="/post/edit/{{.Post.ID}}" class="btn btn-outline">수정</a>
+                {{end}}
+                {{if or .IsAuthor (and .User .User.IsAdmin)}}
                 <form method="POST" action="/post/delete/{{.Post.ID}}" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
                     <button type="submit" class="btn btn-outline" style="border-color:#f44;color:#f44;">삭제</button>
                 </form>
@@ -470,9 +472,12 @@ const postTemplateUnified = `<!DOCTYPE html>
                         {{end}}
                         <span class="comment-date">{{.CreatedAt | formatDate}}</span>
                     </div>
-                    {{if and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
+                    {{$isMyComment := and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
+                    {{if or $isMyComment (and $.User $.User.IsAdmin)}}
                     <div class="comment-actions" id="comment-actions-{{.ID}}">
+                        {{if $isMyComment}}
                         <button type="button" class="btn btn-sm btn-outline" onclick="editComment({{.ID}})">수정</button>
+                        {{end}}
                         <form method="POST" action="/comment/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
                             <button type="submit" class="btn btn-sm btn-outline" style="border-color:#f44;color:#f44;">삭제</button>
                         </form>
@@ -529,9 +534,12 @@ const postTemplateUnified = `<!DOCTYPE html>
                                 </div>
                                 <span class="comment-date">{{.CreatedAt | formatDate}}</span>
                             </div>
-                            {{if and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
+                            {{$isMyReply := and (eq .AuthorType "user") (eq .AuthorID $.UserID)}}
+                            {{if or $isMyReply (and $.User $.User.IsAdmin)}}
                             <div class="comment-actions" id="comment-actions-{{.ID}}">
+                                {{if $isMyReply}}
                                 <button type="button" class="btn btn-sm btn-outline" onclick="editComment({{.ID}})">수정</button>
+                                {{end}}
                                 <form method="POST" action="/comment/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
                                     <button type="submit" class="btn btn-sm btn-outline" style="border-color:#f44;color:#f44;">삭제</button>
                                 </form>

@@ -50,6 +50,44 @@ func (s *CommentService) UpdateCommentForWeb(id int, content string) error {
 	return nil
 }
 
+// GetComment 댓글 단일 조회
+func (s *CommentService) GetComment(id int) (*models.Comment, error) {
+	db := s.db.GetDB()
+	if db == nil {
+		return nil, errors.New("데이터베이스에 연결되지 않았습니다")
+	}
+
+	c := &models.Comment{}
+	var parentID sql.NullInt64
+	var authorNickname sql.NullString
+
+	err := db.QueryRow(`
+		SELECT 
+			c.id, c.post_id, c.parent_id, c.author_type, c.author_id, c.content, c.created_at,
+			CASE 
+				WHEN c.author_type = 'user' THEN (SELECT nickname FROM users WHERE id = c.author_id)
+				ELSE (SELECT nickname FROM ai_characters WHERE id = c.author_id)
+			END as author_nickname
+		FROM comments c
+		WHERE c.id = ?
+	`, id).Scan(&c.ID, &c.PostID, &parentID, &c.AuthorType, &c.AuthorID,
+		&c.Content, &c.CreatedAt, &authorNickname)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if parentID.Valid {
+		pid := int(parentID.Int64)
+		c.ParentID = &pid
+	}
+	if authorNickname.Valid {
+		c.AuthorNickname = authorNickname.String
+	}
+
+	return c, nil
+}
+
 // GetComments 게시물의 댓글 목록 조회
 func (s *CommentService) GetComments(postID int) ([]*models.Comment, error) {
 	db := s.db.GetDB()

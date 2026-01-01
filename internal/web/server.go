@@ -711,8 +711,10 @@ func (ws *WebServer) handlePostDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 작성자 본인 확인
-	log.Printf("[DEBUG] handlePostDelete: UserID=%d, PostAuthorID=%d, AuthorType=%s\n", user.ID, post.AuthorID, post.AuthorType)
-	if post.AuthorType != "user" || post.AuthorID != user.ID {
+	log.Printf("[DEBUG] handlePostDelete: UserID=%d, PostAuthorID=%d, AuthorType=%s, IsAdmin=%v\n", user.ID, post.AuthorID, post.AuthorType, user.IsAdmin)
+
+	isAuthor := post.AuthorType == "user" && post.AuthorID == user.ID
+	if !isAuthor && !user.IsAdmin {
 		log.Println("[DEBUG] handlePostDelete: Permission denied")
 		http.Error(w, "권한이 없습니다.", http.StatusForbidden)
 		return
@@ -797,30 +799,15 @@ func (ws *WebServer) handleCommentDelete(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// 댓글 조회 로직이 필요함 (Service에 GetCommentById 없으면 추가하거나, 직접 DB 조회)
-	// 여기선 편의상 commentService를 통해 가져온다고 가정.
-	// 하지만 현재 commentService에는 GetCommentByID가 없음.
-	// 임시로 PostID 리다이렉트를 위해 form value 받음.
-	postIDStr := r.FormValue("post_id")
-
-	// 본인 확인 로직 필요: Service에 DeleteCommentV2 같은걸 만들어서 user_id 체크를 넣거나
-	// 아니면 여기서 DB 조회를 해야함.
-	// 간단히 구현하기 위해: CommentService에 AuthorID 확인 후 삭제하는 로직이 없으니,
-	// 여기서 DB 조회를 추가하거나, Service에 'DeleteCommentByOwner' 메서드를 추가하는게 정석.
-	// 우선은 간단히 CommentService에 의존하되, 보안이 약간 취약할 수 있음 (ID만 알면 삭제 시도 가능) -> 절대 안됨.
-	// 해결책: Database 객체 접근하여 직접 확인.
-
-	comment := new(models.Comment)
-	// ws.db 접근 필요. 하지만 ws.db는 *database.Database 타입.
-	// 직접 쿼리:
-	db := ws.db.GetDB()
-	err = db.QueryRow("SELECT id, author_type, author_id, post_id FROM comments WHERE id = ?", id).Scan(&comment.ID, &comment.AuthorType, &comment.AuthorID, &comment.PostID)
+	comment, err := ws.commentService.GetComment(id)
 	if err != nil {
-		http.Error(w, "댓글을 찾을 수 없습니다", http.StatusNotFound)
+		http.Error(w, "댓글을 찾을 수 없습니다.", http.StatusNotFound)
 		return
 	}
 
-	if comment.AuthorType != "user" || comment.AuthorID != user.ID {
+	// 작성자 또는 관리자 권한 확인
+	isAuthor := comment.AuthorType == "user" && comment.AuthorID == user.ID
+	if !isAuthor && !user.IsAdmin {
 		http.Error(w, "권한이 없습니다.", http.StatusForbidden)
 		return
 	}
@@ -832,10 +819,7 @@ func (ws *WebServer) handleCommentDelete(w http.ResponseWriter, r *http.Request)
 	}
 
 	redirectURL := fmt.Sprintf("/post/%d", comment.PostID)
-	// 폼에서 받은 post_id가 있으면 우선 사용 (DB조회 했으니 comment.PostID가 정확함)
-	if postIDStr != "" {
-		// 이미 DB에서 가져왔으니 무시해도 됨
-	}
+	// 폼에서 받은 post_id 무시 (DB 값 사용)
 
 	http.Redirect(w, r, redirectURL, http.StatusFound) // 302
 }

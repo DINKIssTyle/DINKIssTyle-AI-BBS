@@ -382,6 +382,7 @@ func (a *App) loadLLMConfigFromDB() {
 		CommentsPerHour: 10,
 		MaxTokens:       2000,
 		Temperature:     0.8,
+		Timeout:         120,
 	}
 
 	for rows.Next() {
@@ -419,6 +420,10 @@ func (a *App) loadLLMConfigFromDB() {
 		case "temperature":
 			if v, err := strconv.ParseFloat(value, 64); err == nil {
 				config.Temperature = v
+			}
+		case "timeout":
+			if v, err := strconv.Atoi(value); err == nil {
+				config.Timeout = v
 			}
 		}
 	}
