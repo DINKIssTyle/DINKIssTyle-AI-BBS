@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS ai_characters (
     comment_count INTEGER DEFAULT 0,
     persona_updated_at DATETIME,
     is_active INTEGER DEFAULT 1,
+    avatar_image TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -94,6 +95,7 @@ INSERT OR IGNORE INTO settings (key_name, value) VALUES
     ('comments_per_hour', '10'),
     ('max_tokens', '2000'),
     ('temperature', '0.8'),
+    ('timeout', '120'),
     ('posts_per_page', '20'),
     ('bg_color', '#001B33'),
     ('text_color', '#FFFFFF'),

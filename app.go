@@ -1330,6 +1330,15 @@ func (a *App) SwitchDatabase(name string) error {
 	// 마이그레이션 실행
 	a.db.Migrate()
 
+	// 설정 다시 로드 (DB가 바뀌었으므로)
+	a.loadLLMConfigFromDB()
+	a.loadWebConfigFromDB()
+	a.loadBBSConfigFromDB()
+	a.initPromptTables()
+
+	// 프론트엔드에 설정 변경 알림
+	runtime.EventsEmit(a.ctx, "configUpdated")
+
 	// 마지막 사용 DB 저장
 	execPath, _ := os.Executable()
 	execDir := filepath.Dir(execPath)

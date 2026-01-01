@@ -181,6 +181,39 @@ func (d *Database) Migrate() error {
 		fmt.Println("[DEBUG] ai_characters 테이블에 persona_updated_at 컬럼을 추가했습니다.")
 	}
 
+	// ai_characters 테이블에 avatar_image 컬럼이 없으면 추가
+	rows, err = d.db.Query("PRAGMA table_info(ai_characters)")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	hasAvatarImage := false
+	for rows.Next() {
+		var cid int
+		var name, dtype string
+		var notnull int
+		var dfltValue interface{}
+		var pk int
+		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
+			return err
+		}
+		if name == "avatar_image" {
+			hasAvatarImage = true
+			break
+		}
+	}
+
+	if !hasAvatarImage {
+		_, err := d.db.Exec("ALTER TABLE ai_characters ADD COLUMN avatar_image TEXT")
+		if err != nil {
+			// 이미 존재할 수도 있으므로 에러 무시 혹은 로깅
+			fmt.Printf("[WARNING] avatar_image 컬럼 추가 실패 (이미 존재할 수 있음): %v\n", err)
+		} else {
+			fmt.Println("[DEBUG] ai_characters 테이블에 avatar_image 컬럼을 추가했습니다.")
+		}
+	}
+
 	// posts 테이블에 is_pinned 컬럼이 없으면 추가
 	rows, err = d.db.Query("PRAGMA table_info(posts)")
 	if err != nil {
@@ -210,37 +243,6 @@ func (d *Database) Migrate() error {
 			return fmt.Errorf("posts 마이그레이션 실패 (is_pinned): %w", err)
 		}
 		fmt.Println("[DEBUG] posts 테이블에 is_pinned 컬럼을 추가했습니다.")
-	}
-
-	// ai_characters 테이블에 avatar_image 컬럼이 없으면 추가
-	rows, err = d.db.Query("PRAGMA table_info(ai_characters)")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	hasAvatarImage := false
-	for rows.Next() {
-		var cid int
-		var name, dtype string
-		var notnull int
-		var dfltValue interface{}
-		var pk int
-		if err := rows.Scan(&cid, &name, &dtype, &notnull, &dfltValue, &pk); err != nil {
-			return err
-		}
-		if name == "avatar_image" {
-			hasAvatarImage = true
-			break
-		}
-	}
-
-	if !hasAvatarImage {
-		_, err := d.db.Exec("ALTER TABLE ai_characters ADD COLUMN avatar_image TEXT DEFAULT ''")
-		if err != nil {
-			return fmt.Errorf("ai_characters 마이그레이션 실패 (avatar_image): %w", err)
-		}
-		fmt.Println("[DEBUG] ai_characters 테이블에 avatar_image 컬럼을 추가했습니다.")
 	}
 
 	// users 테이블에 설정 컬럼들 추가
@@ -286,6 +288,12 @@ func (d *Database) Migrate() error {
 			}
 			fmt.Printf("[DEBUG] users 테이블에 %s 컬럼을 추가했습니다.\n", col.name)
 		}
+	}
+
+	// 기본 타임아웃 설정 추가 (없을 경우)
+	_, err = d.db.Exec("INSERT OR IGNORE INTO settings (key_name, value) VALUES ('timeout', '120')")
+	if err != nil {
+		fmt.Printf("[WARNING] 타임아웃 설정 추가 실패: %v\n", err)
 	}
 
 	return nil

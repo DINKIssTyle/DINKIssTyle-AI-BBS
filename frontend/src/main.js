@@ -81,6 +81,21 @@ async function initMainMode() {
         viewer.scrollTop = viewer.scrollHeight;
     });
 
+    // 설정 변경 이벤트 수신 (DB 전환 등)
+    window.runtime?.EventsOn('configUpdated', () => {
+        console.log("Configuration updated, reloading UI settings...");
+        loadWebConfig();
+        loadLLMConfig();
+        loadBBSConfig();
+        loadUsers(); // 사용자 목록도 갱신
+        loadDatabaseInfo(); // DB 정보 갱신
+
+        // 프롬프트 로드 (탭이 활성화되어 있다면)
+        if ($('.settings-tab-btn[data-tab="prompt-settings"]')?.classList.contains('active')) {
+            loadPrompts();
+        }
+    });
+
     // 새 창 열기 버튼 이벤트
     const btnOpen = $('#btn-open-char-manager');
     if (btnOpen) {

@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -263,8 +264,40 @@ func (s *LLMService) GenerateCommentContent(character *models.AICharacter, post 
 		recommend = true
 		response = strings.ReplaceAll(response, "[RECOMMEND]", "")
 	}
+	response = strings.TrimSpace(response)
 
-	return strings.TrimSpace(response), recommend, nil
+	// 중복 댓글 검사 (1회 재시도)
+	isDuplicate := false
+	if len(existingComments) > 0 {
+		for _, c := range existingComments {
+			// 공백 제거 후 비교 (이모지 등 미세한 차이 무시를 위해 Jaro-Winkler 등을 쓰면 좋지만 여기선 단순 포함/일치 검사)
+			// 사용자가 제보한 케이스는 거의 똑같으므로 문자열 포함 여부로 체크
+			respClean := strings.ReplaceAll(response, " ", "")
+			existClean := strings.ReplaceAll(c.Content, " ", "")
+
+			// 완전히 똑같거나, 기존 댓글이 새 댓글을 포함하고 있거나(부분집합), 새 댓글이 기존 댓글을 포함하는 경우
+			if respClean == existClean || (len(respClean) > 10 && strings.Contains(existClean, respClean)) {
+				isDuplicate = true
+				break
+			}
+		}
+
+		if isDuplicate {
+			log.Printf("[LLM] 중복 댓글 감지됨, 재생성 시도 (Model: %s)", modelName)
+			// 프롬프트에 강력한 경고 추가하여 재시도
+			retryPrompt := prompt + "\n\n[SYSTEM WARNING] 방금 생성한 답변은 이미 존재하는 댓글과 똑같습니다. 절대 똑같이 쓰지 말고, 완전히 다른 문장으로 다시 작성하세요."
+			retryResponse, err := s.sendRequest(retryPrompt, modelName)
+			if err == nil {
+				retryResponse = strings.ReplaceAll(retryResponse, "[RECOMMEND]", "") // 재시도 응답에서도 태그 제거
+				response = strings.TrimSpace(retryResponse)
+			} else {
+				log.Printf("[LLM] 재생성 실패, 중복된 댓글 폐기: %v", err)
+				return "", false, errors.New("중복 댓글 감지 및 재생성 실패")
+			}
+		}
+	}
+
+	return response, recommend, nil
 }
 
 // GenerateReplyContent AI 캐릭터가 본인 글에 달린 댓글에 답글 생성
@@ -453,6 +486,10 @@ func sanitizeLLMResponse(content string) string {
 	content = strings.ReplaceAll(content, "**", "")
 	content = strings.ReplaceAll(content, "*", "")
 
+	// 이모지 제거 (유니코드 범위: 이모티콘, 심볼, 픽토그램 등)
+	emojiPattern := regexp.MustCompile(`[\x{1F300}-\x{1F5FF}\x{1F600}-\x{1F64F}\x{1F680}-\x{1F6FF}\x{1F900}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]`)
+	content = emojiPattern.ReplaceAllString(content, "")
+
 	// 앞뒤 공백 및 불필요한 따옴표 제거
 	content = strings.TrimSpace(content)
 
@@ -556,25 +593,24 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 	// 주제 선택 강제성 (70% 확률로 주제 고정, 30% 자유)
 	topicInstruction := ""
 	if rng.Float64() < 0.7 {
-		topicInstruction = fmt.Sprintf("[필수 작성 주제: %s]\n이번 게시물은 반드시 위 주제와 관련지어 작성해야 합니다. 당신의 캐릭터 특성을 살려 이 주제에 대한 생각이나 경험을 이야기하세요.", randomTopic)
+		topicInstruction = fmt.Sprintf("[필수 작성 주제: %s]\n이번 게시물은 반드시 위 주제와 관련지어 작성해야 합니다. 당신의 인격, 캐릭터 특성을 살려 이 주제에 대한 생각이나 경험을 이야기하세요.", randomTopic)
 	} else {
-		topicInstruction = fmt.Sprintf("[추천 주제: %s]\n특별히 쓸 내용이 없다면 위 주제를 활용해보세요. 물론 다른 자유로운 주제를 선택해도 좋습니다.", randomTopic)
+		topicInstruction = fmt.Sprintf("[추천 주제: %s]\n위 주제를 활용해보세요. 다른 자유로운 주제를 선택해도 좋습니다.", randomTopic)
 	}
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 글 작성자입니다.
+	prompt := fmt.Sprintf(`당신의 닉네임은 %s입니다.
 당신은 %d세 %s으로 %s에 거주하며, 취미는 %s, 직종은 %s입니다.
-당신의 MBTI는 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
-글을 작성하고 있는 오늘은 %s, %s 입니다.
-글작성 스타일은 %s입니다.
+글작성 스타일은 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
+참고로 현재는 %s, %s 입니다.
 
 %s
 `, character.Nickname, character.Age, character.Gender, character.Region, character.Hobby,
-		character.JobCategory, character.MBTI, character.AggressionLevel,
-		character.FormalityLevel, monthStr, timeStr, mbtiDesc, topicInstruction)
+		character.JobCategory, mbtiDesc, character.AggressionLevel,
+		character.FormalityLevel, monthStr, timeStr, topicInstruction)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[최근 보정 된 당신의 요약 정보]
+		prompt += fmt.Sprintf(`[당신이 글 작성시 지켜야할 캐릭터]
 %s
 
 `, character.PersonaSummary)
@@ -776,37 +812,73 @@ func truncateString(s string, maxLen int) string {
 // extractPostContent 불완전한 JSON에서 title과 content 추출
 func extractPostContent(response string) PostContent {
 	result := PostContent{}
-	titleStart := strings.Index(response, `"title"`)
-	if titleStart != -1 {
-		colonIdx := strings.Index(response[titleStart:], ":")
-		if colonIdx != -1 {
-			valueStart := titleStart + colonIdx + 1
-			firstQuote := strings.Index(response[valueStart:], `"`)
-			if firstQuote != -1 {
-				valueStart += firstQuote + 1
-				closing := strings.Index(response[valueStart:], `"`)
-				if closing != -1 {
-					result.Title = response[valueStart : valueStart+closing]
+
+	// 제목 추출 시도 (정규식 사용이 더 안전함)
+	// "title": "..." 패턴 찾기
+	titlePattern := regexp.MustCompile(`"title"\s*:\s*"(.*?)"`)
+	titleMatch := titlePattern.FindStringSubmatch(response)
+	if len(titleMatch) > 1 {
+		result.Title = titleMatch[1]
+	}
+
+	// 본문 추출 시도 1: 정규식 (줄바꿈 포함 (?s))
+	// "content": "..." 패턴
+	contentPattern := regexp.MustCompile(`(?s)"content"\s*:\s*"(.*?)"`)
+	contentMatch := contentPattern.FindStringSubmatch(response)
+	if len(contentMatch) > 1 {
+		// 내용이 너무 짧으면(5자 미만) 무시하고 뒷부분 검색으로 넘어갈 수도 있음
+		// 하지만 "content": "\n 내용..." 형태라면 여기서 잡힐 것임.
+		if len(contentMatch[1]) > 0 {
+			result.Content = contentMatch[1]
+		}
+	}
+
+	// 본문 추출 시도 2: 정규식으로 못 잡았거나 내용이 비어있는 경우, 뒷부분 텍스트 탐색
+	// Ministral: "content": "" \n "내용..."
+	if result.Content == "" || len(result.Content) < 5 {
+		// "content" 키워드 뒤쪽을 수동 탐색
+		idx := strings.LastIndex(response, `"content"`)
+		if idx != -1 {
+			afterContent := response[idx:]
+			// 콜론 찾기
+			colonIdx := strings.Index(afterContent, ":")
+			if colonIdx != -1 {
+				valuePart := afterContent[colonIdx+1:]
+				valuePart = strings.TrimSpace(valuePart)
+
+				// "" 빈 문자열이 바로 오는지 확인
+				if strings.HasPrefix(valuePart, `""`) {
+					// 빈 문자열 뒤의 나머지 텍스트를 본문으로 간주
+					remainder := strings.TrimSpace(valuePart[2:])
+					if len(remainder) > 0 {
+						// 따옴표로 감싸져 있다면 제거
+						if strings.HasPrefix(remainder, `"`) && strings.HasSuffix(remainder, `"`) {
+							result.Content = remainder[1 : len(remainder)-1]
+						} else if strings.HasPrefix(remainder, `"`) {
+							result.Content = remainder[1:]
+						} else {
+							result.Content = remainder
+						}
+					}
 				}
 			}
 		}
 	}
-	contentStart := strings.Index(response, `"content"`)
-	if contentStart != -1 {
-		colonIdx := strings.Index(response[contentStart:], ":")
-		if colonIdx != -1 {
-			valueStart := contentStart + colonIdx + 1
-			firstQuote := strings.Index(response[valueStart:], `"`)
-			if firstQuote != -1 {
-				valueStart += firstQuote + 1
-				closing := strings.LastIndex(response[valueStart:], `"`)
-				if closing != -1 {
-					result.Content = response[valueStart : valueStart+closing]
+
+	// 본문 추출 시도 3: "내용은 다음처럼 작성되었습니다:" 등의 프리픽스 제거
+	if result.Content != "" {
+		prefixes := []string{"내용은 다음처럼 작성되었습니다:", "내용은:", "작성된 내용:"}
+		for _, p := range prefixes {
+			if idx := strings.Index(result.Content, p); idx != -1 {
+				// 해당 문구 이후 줄바꿈 뒤의 내용을 진짜 본문으로 간주
+				if newlineIdx := strings.Index(result.Content[idx:], "\n"); newlineIdx != -1 {
+					result.Content = result.Content[idx+newlineIdx+1:]
 				} else {
-					result.Content = response[valueStart:]
+					result.Content = result.Content[idx+len(p):]
 				}
 			}
 		}
 	}
+
 	return result
 }
