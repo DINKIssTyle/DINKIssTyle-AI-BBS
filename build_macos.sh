@@ -88,7 +88,7 @@ echo ""
 BUILD_DATE=$(date "+%Y%m%d")
 
 echo "[4/4] Wails 빌드 중..."
-wails build -ldflags "-X main.buildDate=build $BUILD_DATE"
+wails build -ldflags "-X 'main.buildDate=build $BUILD_DATE'"
 
 echo ""
 echo "================================"
