@@ -3,6 +3,7 @@
 :root {
     --bg-color: #001B33;
     --text-color: #FFFFFF;
+    --text-color-gray: #888888;
     --accent-color: #00BFFF;
     --border-color: #336699;
     --header-bg: #002244;
@@ -525,6 +526,8 @@ body {
     /* color: #AAA; */
 }
 
+
+
 .form-input-sm {
     width: 80px;
     background: var(--header-bg);
@@ -542,6 +545,18 @@ body {
     cursor: pointer;
 }
 
+.hint {
+    color: var(--text-color-gray);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.description {
+    color: var(--text-color);
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
 .form-select {
     width: 100%;
     background: var(--header-bg);
@@ -554,7 +569,7 @@ body {
 .button-group {
     /* display: flex; */
     gap: 10px;
-    margin: 15px 0;
+    /* margin: 15px 0; */
 }
 
 .btn-primary {
