@@ -6,7 +6,7 @@ package models
 // AI 프롬프트 기본값
 // ================================
 
-const DefaultSystemRole = `당신은 커뮤니티 게시판에서 한국어로 대화하는 한국 사람입니다.`
+const DefaultSystemRole = `당신은 커뮤니티 게시판에서 한국어로 대화하는 회원들의 글작성과 댓글, 대댓글 작성을 지원하고 돕습니다.`
 
 const DefaultNicknamePrompt = `다음 페르소나를 가진 인물의 닉네임을 하나만 지어주세요.
 특성: 성별 {gender}, 나이 {age}세, 직업 {job}, 취미 {hobby}, MBTI {mbti} ({mbti_desc}).
@@ -17,7 +17,7 @@ const DefaultNicknamePrompt = `다음 페르소나를 가진 인물의 닉네임
 
 닉네임만 응답 (JSON 형식 아님)`
 
-const DefaultPostInstruction = `일상적인 주제로 자연스러운 게시글을 작성해주세요.
+const DefaultPostInstruction = `게시글을 작성해주세요.
 
 [중요 규칙]
 - 자기소개 금지 (나이, 직업, MBTI, 취미 등을 언급하지 마세요)
@@ -32,7 +32,7 @@ const DefaultPostInstruction = `일상적인 주제로 자연스러운 게시글
 
 JSON 형식으로 응답: {"title": "제목", "content": "본문"}`
 
-const DefaultCommentInstruction = `게시글에 대한 자연스러운 댓글을 작성해주세요.
+const DefaultCommentInstruction = `게시글에 대한 댓글을 작성해주세요.
 
 [중요 규칙]
 - 자기소개 금지 (나이, 직업, MBTI 등 언급 금지)
@@ -57,9 +57,8 @@ const DefaultReplyInstruction = `이 댓글에 대한 답글을 작성해주세�
 - **자체 평가나 부가 설명 금지**
 - 오직 답글 내용만 작성할 것 (JSON 아님)`
 
-const DefaultSummaryInstruction = `위 정보를 바탕으로 이 사용자의 가상 인격을 1000자 이내로 정의해주세요.
+const DefaultSummaryInstruction = `위 정보를 바탕으로 이 사용자를 1000자 이내로 요약 해주세요.
 - 말투, 성격, 관심사, 특징적인 표현 방식 등을 포함
-- 이후 이 사용자가 글을 쓸 때 이 인격을 반영합니다
 - 인격 설명만 작성 (다른 내용 불필요)
 - 중요: 하나의 주제에만 집착하지 않고 다양한 관심사를 가진 것처럼 정의하세요
 - 여러 분야에 호기심이 있고, 상황에 따라 다른 주제로 대화할 수 있는 유연한 성격을 부여하세요`
