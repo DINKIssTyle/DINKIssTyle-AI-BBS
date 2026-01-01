@@ -357,10 +357,16 @@ func (a *App) ensureAdminExists() {
 }
 
 // shutdown 앱 종료 시 호출
+// shutdown 앱 종료 시 호출
 func (a *App) shutdown(ctx context.Context) {
 	// AI 활동 정지
 	if a.activityManager != nil {
 		a.activityManager.Stop()
+	}
+
+	// 웹 서버 정지 (프로세스 잔존 방지)
+	if a.webServer != nil {
+		a.webServer.Stop()
 	}
 
 	// DB 연결 종료
