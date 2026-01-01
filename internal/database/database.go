@@ -94,6 +94,12 @@ func (d *Database) Connect() error {
 		fmt.Printf("[WARNING] Busy Timeout 설정 실패: %v\n", err)
 	}
 
+	// 외래키 제약조건 활성화 (중요)
+	_, err = db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		fmt.Printf("[WARNING] 외래키 제약조건 활성화 실패: %v\n", err)
+	}
+
 	return nil
 }
 

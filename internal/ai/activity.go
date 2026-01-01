@@ -25,6 +25,7 @@ type ActivityManager struct {
 	running  bool
 	stopChan chan struct{}
 	mu       sync.RWMutex
+	wg       sync.WaitGroup
 
 	postsPerHour    int
 	commentsPerHour int
@@ -79,16 +80,32 @@ func (m *ActivityManager) Start() error {
 	m.mu.Unlock()
 
 	// 게시물 작성 고루틴
-	go m.postActivityLoop()
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		m.postActivityLoop()
+	}()
 
 	// 댓글 작성 고루틴
-	go m.commentActivityLoop()
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		m.commentActivityLoop()
+	}()
 
 	// 게시물 브라우징 (조회수 증가) 고루틴
-	go m.browsingActivityLoop()
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		m.browsingActivityLoop()
+	}()
 
 	// 본인 글에 달린 댓글에 답글 달기 고루틴
-	go m.replyToCommentsLoop()
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		m.replyToCommentsLoop()
+	}()
 
 	log.Println("AI 활동 시작됨")
 	return nil
@@ -97,14 +114,17 @@ func (m *ActivityManager) Start() error {
 // Stop AI 활동 정지
 func (m *ActivityManager) Stop() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if !m.running {
+		m.mu.Unlock()
 		return
 	}
 
 	close(m.stopChan)
 	m.running = false
+	m.mu.Unlock()
+
+	// 모든 고루틴 종료 대기
+	m.wg.Wait()
 	log.Println("AI 활동 정지됨")
 }
 

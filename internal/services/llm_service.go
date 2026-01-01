@@ -567,7 +567,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[최근 보정 된 당산의 요약 정보]
+		prompt += fmt.Sprintf(`[최근 보정 된 당신의 요약 정보]
 %s
 
 `, character.PersonaSummary)

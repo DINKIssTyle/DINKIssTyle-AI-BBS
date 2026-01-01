@@ -363,6 +363,10 @@ func (s *PostService) DeletePost(id int) error {
 		return errors.New("삭제 권한이 없습니다")
 	}
 
+	// 관련 데이터 삭제 (FK가 작동하지 않을 경우 대비)
+	_, _ = db.Exec("DELETE FROM comments WHERE post_id = ?", id)
+	_, _ = db.Exec("DELETE FROM recommendations WHERE post_id = ?", id)
+
 	_, err = db.Exec("DELETE FROM posts WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("게시물 삭제 실패: %w", err)
@@ -392,6 +396,10 @@ func (s *PostService) DeletePostForWeb(id int) error {
 	if db == nil {
 		return errors.New("데이터베이스에 연결되지 않았습니다")
 	}
+
+	// 관련 데이터 삭제 (FK가 작동하지 않을 경우 대비)
+	_, _ = db.Exec("DELETE FROM comments WHERE post_id = ?", id)
+	_, _ = db.Exec("DELETE FROM recommendations WHERE post_id = ?", id)
 
 	_, err := db.Exec("DELETE FROM posts WHERE id = ?", id)
 	if err != nil {
