@@ -233,9 +233,8 @@ func (s *CharacterService) GenerateCharacters(count int) ([]models.AICharacter, 
 			AvatarImage:        avatarImage,
 		}
 
-		// 인격 요약 생성
-		character.PersonaSummary = fmt.Sprintf("%s 출신의 %s 캐릭터입니다. %s인 성격이며 취미는 %s입니다.",
-			character.Region, character.JobCategory, character.MBTI, character.Hobby)
+		// 인격 요약 생성 (초기값 비워둠 -> 활동 후 자동 생성)
+		character.PersonaSummary = ""
 
 		// 생년월일 생성 (나이를 바탕으로 역산)
 		currentYear := time.Now().Year()
