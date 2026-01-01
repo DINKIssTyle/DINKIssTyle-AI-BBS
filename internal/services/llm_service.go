@@ -343,12 +343,13 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 	defer s.requestMu.Unlock()
 
 	log.Printf("[LLM] 요청 시작 (모델: %s, 현재 대기열: %d)\n", modelName, currentQueue)
+	log.Printf("[LLM PROMPT] ==================================================\n%s\n==================================================\n", prompt)
 
 	url := fmt.Sprintf("http://%s:%s/v1/chat/completions", s.config.Host, s.config.Port)
 
 	maxTokens := s.config.MaxTokens
 	if maxTokens <= 0 {
-		maxTokens = 2000
+		maxTokens = 4096
 	}
 	temperature := s.config.Temperature
 	if temperature <= 0 {
