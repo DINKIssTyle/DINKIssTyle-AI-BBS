@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -71,7 +72,7 @@ func NewLLMService() *LLMService {
 			Model1:          "default",
 			PostsPerHour:    5,
 			CommentsPerHour: 10,
-			MaxTokens:       4000,
+			MaxTokens:       4096,
 			Temperature:     0.8,
 			Timeout:         120,
 		},
@@ -325,6 +326,18 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 		temperature = 0.8
 	}
 
+	// 전략 5: 동적 Temperature 조정 (창의성 증가를 위한 랜덤 부스트)
+	// 30% 확률로 Temperature를 0.1~0.3 증가시켜 다양성 확보
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if rng.Float64() < 0.3 {
+		tempBoost := 0.1 + rng.Float64()*0.2 // 0.1 ~ 0.3
+		temperature += tempBoost
+		if temperature > 1.5 {
+			temperature = 1.5
+		}
+		log.Printf("[LLM] Temperature 부스트 적용: %.2f\n", temperature)
+	}
+
 	// 랜덤 시드 생성 (캐싱 방지 및 다양성 확보)
 	seedVal := int(time.Now().UnixNano() % 2147483647)
 
@@ -430,21 +443,30 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
 	timeStr, monthStr := getTimeContext()
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 인터넷 커뮤니티 게시판 사용자입니다.
-당신의 특성(참고용):
-- 성별: %s, 나이: %d세, 거주지: %s, 취미: %s, 직종: %s
-- MBTI: %s (공격성 %d/10, 진지함 %d/10)
+	// 랜덤 주제 힌트 생성 (전략 2) - DB에서 읽어오거나 기본값 사용
+	topicHintsStr := s.getPromptWithDefault("topic_hints", models.DefaultTopicHints)
+	topicHints := strings.Split(topicHintsStr, ",")
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomTopic := strings.TrimSpace(topicHints[rng.Intn(len(topicHints))])
 
-[현재 시간]
+	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 인터넷 커뮤니티 게시판 사용자입니다.
+	다음과 같은 기본 정보를 이용하여 게시물의 내용을 작성하세요.
+당신의 캐릭터:
+- 성별: %s, 나이: %d세, 거주지: %s, 취미: %s, 직종: %s
+당신의 성격
+- MBTI: %s (공격성 %d/10, 진지함 %d/10)
+현재 시간:
 - 시각: %s
 - 날짜: %s
-
-[글쓰기 스타일]
+글쓰기 스타일
 %s
+
+[오늘의 주제 힌트: %s]
+위 주제는 참고용입니다. 반드시 따를 필요는 없지만, 새로운 주제를 원할 때 활용하세요.
 
 `, character.Nickname, character.Gender, character.Age, character.Region, character.Hobby,
 		character.JobCategory, character.MBTI, character.AggressionLevel,
-		character.FormalityLevel, timeStr, monthStr, mbtiDesc)
+		character.FormalityLevel, timeStr, monthStr, mbtiDesc, randomTopic)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
@@ -454,25 +476,26 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 `, character.PersonaSummary)
 	}
 
+	// 최근 글 - 피해야 할 주제로 명시 (전략 강화)
 	if len(recentPosts) > 0 {
-		prompt += "당신이 최근 작성한 글:\n"
+		prompt += "[작성 금지 주제 - 이미 작성한 글]\n다음 주제는 최근에 작성했으므로 반드시 다른 주제로 작성하세요:\n"
 		for _, p := range recentPosts {
 			prompt += fmt.Sprintf("- %s\n", p.Title)
 		}
 		prompt += "\n"
 	}
 
+	// 다른 사람 글에 반응 유도 (전략 3)
 	if len(popularPosts) > 0 {
-		prompt += "현재 게시판의 인기 글:\n"
+		prompt += "[선택 가능한 행동]\n1. 완전히 새로운 주제로 자유글 작성\n2. 아래 인기글 중 하나를 골라 의견/반응 글 작성 (선택사항):\n"
 		for _, p := range popularPosts {
-			prompt += fmt.Sprintf("- %s (by %s)\n", p.Title, p.AuthorNickname)
+			prompt += fmt.Sprintf("   - \"%s\" (by %s)\n", p.Title, p.AuthorNickname)
 		}
 		prompt += "\n"
 	}
 
 	if len(pinnedPosts) > 0 {
-		prompt += "[게시판 중요 공지사항]\n"
-		prompt += "현재 게시판 상단에 다음 공지가 게시되어 있습니다. 게시판 이용에 이 내용을 참고하고 필요하다면 언급하거나 반응하세요:\n"
+		prompt += "[게시판 중요 공지사항]\n현재 게시판 상단에 다음 공지가 게시되어 있습니다. 게시판 이용에 이 내용을 참고하고 필요하다면 언급하거나 반응하세요:\n"
 		for _, p := range pinnedPosts {
 			prompt += fmt.Sprintf("- 제목: %s\n  내용 요약: %s\n", p.Title, truncateString(p.Content, 200))
 		}

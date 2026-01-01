@@ -1161,6 +1161,7 @@ async function saveBBSConfig() {
 const PROMPT_MAP = {
     'nickname_gen': 'prompt-nickname',
     'system_role': 'prompt-system',
+    'topic_hints': 'prompt-topic-hints',
     'post_instruction': 'prompt-post',
     'comment_instruction': 'prompt-comment',
     'reply_instruction': 'prompt-reply',

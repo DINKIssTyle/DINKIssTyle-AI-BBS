@@ -1339,9 +1339,10 @@ func (ws *WebServer) handleAdmin(w http.ResponseWriter, r *http.Request) {
 
 	// 프롬프트 데이터 로드
 	prompts := make(map[string]string)
-	promptKeys := []string{"system_role", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction", "nickname_gen"}
+	promptKeys := []string{"system_role", "topic_hints", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction", "nickname_gen"}
 	defaults := map[string]string{
 		"system_role":         models.DefaultSystemRole,
+		"topic_hints":         models.DefaultTopicHints,
 		"post_instruction":    models.DefaultPostInstruction,
 		"comment_instruction": models.DefaultCommentInstruction,
 		"reply_instruction":   models.DefaultReplyInstruction,

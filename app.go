@@ -237,6 +237,8 @@ func (a *App) GetPrompt(key string) string {
 		return models.DefaultReplyInstruction
 	case "summary_instruction":
 		return models.DefaultSummaryInstruction
+	case "topic_hints":
+		return models.DefaultTopicHints
 	}
 	return ""
 }
@@ -1605,6 +1607,7 @@ func (a *App) ExportPromptSettings() (string, error) {
 	prompts := map[string]string{
 		"nickname_gen":        "[AI 캐릭터 닉네임 생성 프롬프트]",
 		"system_role":         "[시스템 롤]",
+		"topic_hints":         "[주제 힌트]",
 		"post_instruction":    "[게시글 작성 지시문]",
 		"comment_instruction": "[댓글 작성 지시문]",
 		"reply_instruction":   "[답글 작성 지시문]",
@@ -1612,7 +1615,7 @@ func (a *App) ExportPromptSettings() (string, error) {
 	}
 
 	// 순서 보장을 위해 키 슬라이스 사용
-	orderedKeys := []string{"nickname_gen", "system_role", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction"}
+	orderedKeys := []string{"nickname_gen", "system_role", "topic_hints", "post_instruction", "comment_instruction", "reply_instruction", "summary_instruction"}
 
 	for _, key := range orderedKeys {
 		header := prompts[key]
@@ -1700,6 +1703,7 @@ func (a *App) ImportPromptSettings() (string, error) {
 	headerToKey := map[string]string{
 		"[AI 캐릭터 닉네임 생성 프롬프트]": "nickname_gen",
 		"[시스템 롤]":         "system_role",
+		"[주제 힌트]":         "topic_hints",
 		"[게시글 작성 지시문]":    "post_instruction",
 		"[댓글 작성 지시문]":     "comment_instruction",
 		"[답글 작성 지시문]":     "reply_instruction",

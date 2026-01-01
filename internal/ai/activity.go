@@ -274,8 +274,8 @@ func (m *ActivityManager) createRandomPost() {
 	// 닉네임 업데이트 체크
 	m.updateNicknameIfNeeded(character)
 
-	// 캐릭터의 최근 게시물 조회
-	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 5)
+	// 캐릭터의 최근 게시물 조회 (전략 4: 참조 범위 확대)
+	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 15)
 
 	// 인기 게시물 조회
 	popularPosts, _ := m.postService.GetPopularPosts(5)

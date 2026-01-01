@@ -1242,6 +1242,21 @@ const adminTemplateUnified = `<!DOCTYPE html>
             </div>
 
             <div class="prompt-section">
+                <h4>주제 힌트 (Topic Hints)</h4>
+                <form method="POST">
+                    <input type="hidden" name="action" value="prompt">
+                    <input type="hidden" name="prompt_key" value="topic_hints">
+                    <div class="form-group">
+                        <textarea name="prompt_content" rows="2">{{.Prompts.topic_hints}}</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">저장</button>
+                        <button type="submit" name="reset" value="1" class="btn btn-reset">초기화</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="prompt-section">
                 <h4>글 작성 지침 (Post Instruction)</h4>
                 <form method="POST">
                     <input type="hidden" name="action" value="prompt">
