@@ -668,7 +668,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 당신이 살아온 인생: %s
 
 당신의 글작성 스타일은 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
-참고로 현재는 %s, %s 입니다.
+글 작성하는 현재는 %s, %s 입니다.
 
 %s
 `, character.Nickname, character.Birthdate, character.Age, character.Gender,
@@ -678,7 +678,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 최근 활동입니다. 동일하거나 유사하게 글을 쓰지 마세요.]
+		prompt += fmt.Sprintf(`[중요! 당신의 최근 활동입니다. 이전 글과 반복적인 주제나 유사한 내용의 글은 금지합니다.]
 %s
 
 `, character.PersonaSummary)
