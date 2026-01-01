@@ -559,9 +559,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 - 성별: %s, 나이: %d세, 거주지: %s, 취미: %s, 직종: %s
 당신의 성격
 - MBTI: %s (공격성 %d/10, 진지함 %d/10)
-현재 시간:
-- 시각: %s
-- 날짜: %s
+글을 작성하고 있는 오늘은 %s, %s 입니다.
 글쓰기 스타일
 %s
 
@@ -569,7 +567,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 
 `, character.Nickname, character.Gender, character.Age, character.Region, character.Hobby,
 		character.JobCategory, character.MBTI, character.AggressionLevel,
-		character.FormalityLevel, timeStr, monthStr, mbtiDesc, topicInstruction)
+		character.FormalityLevel, monthStr, timeStr, mbtiDesc, topicInstruction)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
@@ -584,7 +582,7 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 		prompt += "[최근 게시판 분위기 - 참고만 하세요]\n최근에 올라온 글들입니다:\n"
 		count := 0
 		for _, p := range recentPosts {
-			if count >= 3 {
+			if count >= 10 {
 				break
 			}
 			prompt += fmt.Sprintf("- %s\n", p.Title)
@@ -622,9 +620,9 @@ func (s *LLMService) buildCommentPrompt(character *models.AICharacter, post *mod
 
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 커뮤니티 사용자입니다.
 글쓰기 스타일: %s
-현재 시각: %s, %s
+댓글을 쓰는 현재 날짜와 시간은 %s, %s 입니다.
 
-`, character.Nickname, mbtiDesc, timeStr, monthStr)
+`, character.Nickname, mbtiDesc, monthStr, timeStr)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
