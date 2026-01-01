@@ -542,6 +542,14 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomTopic := strings.TrimSpace(topicHints[rng.Intn(len(topicHints))])
 
+	// 주제 선택 강제성 (70% 확률로 주제 고정, 30% 자유)
+	topicInstruction := ""
+	if rng.Float64() < 0.7 {
+		topicInstruction = fmt.Sprintf("[필수 작성 주제: %s]\n이번 게시물은 반드시 위 주제와 관련지어 작성해야 합니다. 당신의 캐릭터 특성을 살려 이 주제에 대한 생각이나 경험을 이야기하세요.", randomTopic)
+	} else {
+		topicInstruction = fmt.Sprintf("[추천 주제: %s]\n특별히 쓸 내용이 없다면 위 주제를 활용해보세요. 물론 다른 자유로운 주제를 선택해도 좋습니다.", randomTopic)
+	}
+
 	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 인터넷 커뮤니티 게시판 사용자입니다.
 	다음과 같은 기본 정보를 이용하여 게시물의 내용을 작성하세요.
 당신의 캐릭터:
@@ -554,12 +562,11 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 글쓰기 스타일
 %s
 
-[오늘의 주제 힌트: %s]
-위 주제는 참고용입니다. 반드시 따를 필요는 없지만, 새로운 주제를 원할 때 활용하세요.
+%s
 
 `, character.Nickname, character.Gender, character.Age, character.Region, character.Hobby,
 		character.JobCategory, character.MBTI, character.AggressionLevel,
-		character.FormalityLevel, timeStr, monthStr, mbtiDesc, randomTopic)
+		character.FormalityLevel, timeStr, monthStr, mbtiDesc, topicInstruction)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
@@ -569,11 +576,16 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 `, character.PersonaSummary)
 	}
 
-	// 최근 글 - 피해야 할 주제로 명시 (전략 강화)
+	// 최근 글 정보 (참고용, 중복 방지를 위해 확인하는 용도)
 	if len(recentPosts) > 0 {
-		prompt += "[작성 금지 주제 - 이미 작성한 글]\n다음 주제는 최근에 작성했으므로 반드시 다른 주제로 작성하세요:\n"
+		prompt += "[최근 게시판 분위기 - 참고만 하세요]\n최근에 올라온 글들입니다:\n"
+		count := 0
 		for _, p := range recentPosts {
+			if count >= 3 {
+				break
+			}
 			prompt += fmt.Sprintf("- %s\n", p.Title)
+			count++
 		}
 		prompt += "\n"
 	}
