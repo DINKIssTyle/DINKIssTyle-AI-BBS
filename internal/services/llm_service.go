@@ -393,6 +393,20 @@ func (s *LLMService) sendRequest(prompt string, modelName string) (string, error
 
 // sanitizeLLMResponse LLM 응답 정제 (이스케이프 시퀀스 변환, 불필요한 문자 제거)
 func sanitizeLLMResponse(content string) string {
+	// 마크다운 코드 블록 제거 (```json ... ``` 또는 ``` ... ```)
+	content = strings.TrimSpace(content)
+	if strings.HasPrefix(content, "```") {
+		// 첫 번째 줄 제거 (```json 또는 ```)
+		if idx := strings.Index(content, "\n"); idx != -1 {
+			content = content[idx+1:]
+		}
+		// 마지막 ``` 제거
+		if strings.HasSuffix(content, "```") {
+			content = content[:len(content)-3]
+		}
+		content = strings.TrimSpace(content)
+	}
+
 	// 리터럴 이스케이프 시퀀스를 실제 문자로 변환
 	content = strings.ReplaceAll(content, "\\n\\n", "\n\n") // 먼저 \\n\\n 처리
 	content = strings.ReplaceAll(content, "\\n", "\n")      // 그 다음 \\n 처리
