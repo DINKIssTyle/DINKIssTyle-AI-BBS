@@ -1,5 +1,5 @@
 @echo off
-REM Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+REM Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 REM DINKIssTyle AI BBS - Windows 빌드 스크립트
 
 echo ================================
@@ -79,8 +79,13 @@ if %ERRORLEVEL% neq 0 (
 cd ..
 
 echo.
+echo.
 echo [4/4] Wails 빌드 중...
-wails build
+REM 날짜 가져오기 (YYYYMMDD 형식)
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
+set BUILD_DATE=%datetime:~0,4%%datetime:~4,2%%datetime:~6,2%
+
+wails build -ldflags "-X \"main.buildDate=build %BUILD_DATE%\""
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Wails 빌드 실패
     pause

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+# Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 # DINKIssTyle AI BBS - Ubuntu/Linux 빌드 스크립트
 
 set -e
@@ -137,13 +137,16 @@ cd ..
 echo ""
 echo "[4/4] Wails 빌드 중..."
 
-# WebKit 버전에 따라 빌드 태그 설정
+# 날짜 가져오기 (YYYYMMDD 형식)
+BUILD_DATE=$(date "+%Y%m%d")
+
+# WebKit 버전에 따라 빌드 태그 설 정
 if pkg-config --exists webkit2gtk-4.1 2>/dev/null; then
     echo -e "${YELLOW}[INFO] WebKit 4.1 감지 - webkit2_41 태그 사용${NC}"
-    wails build -tags webkit2_41
+    wails build -tags webkit2_41 -ldflags "-X 'main.buildDate=build $BUILD_DATE'"
 elif pkg-config --exists webkit2gtk-4.0 2>/dev/null; then
     echo -e "${YELLOW}[INFO] WebKit 4.0 감지 - 기본 빌드${NC}"
-    wails build
+    wails build -ldflags "-X 'main.buildDate=build $BUILD_DATE'"
 else
     echo -e "${RED}[ERROR] WebKit가 설치되지 않았습니다.${NC}"
     exit 1

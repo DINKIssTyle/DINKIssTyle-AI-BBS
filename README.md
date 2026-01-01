@@ -169,7 +169,5 @@ wails build -clean -platform windows/amd64
 
 ## © Copyright
 
-Created by **DINKIssTyle** on 2025.  
-Copyright (C) 2025 **DINKI'ssTyle**. All rights reserved.
-
-build 20251231
+Created by **DINKIssTyle** on 2026.  
+Copyright (C) 2026 **DINKI'ssTyle**. All rights reserved.

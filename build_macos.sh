@@ -1,5 +1,5 @@
 #!/bin/bash
-# Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+# Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 # DINKIssTyle AI BBS - macOS 빌드 스크립트
 
 set -e
@@ -78,8 +78,11 @@ cd ..
 
 # Wails 빌드
 echo ""
+# 날짜 가져오기 (YYYYMMDD 형식)
+BUILD_DATE=$(date "+%Y%m%d")
+
 echo "[4/4] Wails 빌드 중..."
-wails build
+wails build -ldflags "-X main.buildDate=build $BUILD_DATE"
 
 echo ""
 echo "================================"

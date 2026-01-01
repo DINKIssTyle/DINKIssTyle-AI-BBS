@@ -1,4 +1,4 @@
-// Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+// Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 
 // Go 바인딩 함수들
 const go = window.go?.main?.App || {};
@@ -61,6 +61,17 @@ async function initMainMode() {
     loadWebConfig();
     loadLLMConfig();
     loadBBSConfig();
+
+    // 빌드 날짜 로드
+    try {
+        const buildDate = await go.GetBuildDate();
+        const buildInfo = $('.build-info');
+        if (buildInfo) {
+            buildInfo.textContent = buildDate;
+        }
+    } catch (e) {
+        console.error("Failed to load build date:", e);
+    }
 
     // 로그 이벤트 수신
     window.runtime?.EventsOn('log-event', (message) => {

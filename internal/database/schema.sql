@@ -1,4 +1,4 @@
--- Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+-- Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 -- DINKIssTyle AI BBS 데이터베이스 스키마 (SQLite)
 
 -- 사용자 테이블

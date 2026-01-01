@@ -1,4 +1,4 @@
-// Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+// Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 
 package main
 
@@ -16,6 +16,9 @@ import (
 //go:embed all:frontend/dist
 var frontendAssets embed.FS
 
+// 빌드 시점에 ldflags로 주입됨 (예: -ldflags "-X main.buildDate=build 20260102")
+var buildDate string = "Dev Build"
+
 func main() {
 	// 플래그 파싱
 	modePtr := flag.String("mode", "main", "Application mode: main or char_manager")
@@ -24,7 +27,7 @@ func main() {
 	println("[DEBUG] Main function started. Mode:", *modePtr)
 
 	// 앱 인스턴스 생성
-	app := NewApp(*modePtr)
+	app := NewApp(*modePtr, buildDate)
 	println("[DEBUG] App instance created")
 
 	// 윈도우 크기 및 제목 설정

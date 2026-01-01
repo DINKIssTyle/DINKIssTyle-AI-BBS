@@ -1,4 +1,4 @@
-// Created by DINKIssTyle on 2025. Copyright (C) 2025 DINKI'ssTyle. All rights reserved.
+// Created by DINKIssTyle on 2026. Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 
 package main
 
@@ -48,6 +48,9 @@ type App struct {
 
 	// Logger
 	logWriter *WailsLogWriter
+
+	// Build Info
+	buildDate string
 }
 
 // WailsLogWriter 로그를 Wails 이벤트로 전송하는 라이터
@@ -72,10 +75,16 @@ func (w *WailsLogWriter) Write(p []byte) (n int, err error) {
 }
 
 // NewApp 새 앱 인스턴스 생성
-func NewApp(mode string) *App {
+func NewApp(mode string, buildDate string) *App {
 	return &App{
-		mode: mode,
+		mode:      mode,
+		buildDate: buildDate,
 	}
+}
+
+// GetBuildDate 빌드 날짜 반환
+func (a *App) GetBuildDate() string {
+	return a.buildDate
 }
 
 // startup 앱 시작 시 호출
@@ -893,7 +902,7 @@ func (a *App) loadBBSConfigFromDB() {
 	// 기본값 (WebServer 생성 시 이미 설정됨, DB 값으로 오버라이드)
 	config := models.BBSConfig{
 		Title:    "DINKI'ssTyle AI BBS",
-		Footer:   "(C) 2025 DINKI'ssTyle",
+		Footer:   "(C) 2026 DINKI'ssTyle",
 		Theme:    "blue",
 		Font:     "sans",
 		Timezone: "Asia/Seoul",
@@ -1040,7 +1049,7 @@ func (a *App) SaveWebServerConfig(port string, registration bool, sslEnabled boo
 func (a *App) GetBBSConfig() models.BBSConfig {
 	config := models.BBSConfig{
 		Title:        "DINKI'ssTyle AI BBS",
-		Footer:       "(C) 2025 DINKI'ssTyle",
+		Footer:       "(C) 2026 DINKI'ssTyle",
 		Theme:        "blue",
 		Font:         "sans",
 		PostsPerPage: 20,
