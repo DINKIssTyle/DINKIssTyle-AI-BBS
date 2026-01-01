@@ -442,6 +442,9 @@ func sanitizeLLMResponse(content string) string {
 	content = strings.ReplaceAll(content, "\\t", "\t")      // 탭
 	content = strings.ReplaceAll(content, "\\r", "")        // 캐리지 리턴 제거
 
+	// 마크다운 굵은 글씨 강조(**) 제거
+	content = strings.ReplaceAll(content, "**", "")
+
 	// 앞뒤 공백 및 불필요한 따옴표 제거
 	content = strings.TrimSpace(content)
 
