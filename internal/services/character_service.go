@@ -546,7 +546,8 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
-		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count
+		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count,
+			   COALESCE(avatar_image, '')
 		FROM ai_characters 
 		WHERE nickname LIKE '활동전AI%' AND is_active = 1
 		ORDER BY RANDOM()
@@ -555,6 +556,7 @@ func (s *CharacterService) GetCharacterWithPendingNickname() (*models.AICharacte
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
 		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+		&c.AvatarImage,
 	)
 	if err != nil {
 		return nil, err // 변경 대상 없음
@@ -580,7 +582,8 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 	err := db.QueryRow(`
 		SELECT id, nickname, gender, age, birthdate, region, hobby, 
 		       job_category, mbti, aggression_level, formality_level, roleplay_level, 
-		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count
+		       persona_summary, persona_updated_at, assigned_model_index, is_active, post_count, comment_count,
+			   COALESCE(avatar_image, '')
 		FROM ai_characters 
 		WHERE is_active = 1 AND (
 			(COALESCE(persona_summary, '') = '' AND (post_count + comment_count) >= 3)
@@ -594,6 +597,7 @@ func (s *CharacterService) GetCharacterNeedingPersonaUpdate() (*models.AICharact
 		&c.ID, &c.Nickname, &c.Gender, &c.Age, &c.Birthdate, &c.Region, &c.Hobby,
 		&c.JobCategory, &c.MBTI, &c.AggressionLevel, &c.FormalityLevel, &c.RoleplayLevel,
 		&c.PersonaSummary, &personaUpdatedAt, &c.AssignedModelIndex, &c.IsActive, &c.PostCount, &c.CommentCount,
+		&c.AvatarImage,
 	)
 	if err != nil {
 		return nil, err // 갱신 대상 없음

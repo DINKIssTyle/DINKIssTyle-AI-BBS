@@ -229,16 +229,61 @@ func (s *LLMService) GeneratePostContent(character *models.AICharacter, recentPo
 	log.Printf("[LLM] 게시물 응답 (Model: %s): %s\n", modelName, response)
 
 	var postContent PostContent
+
+	// 1차 시도: 구조체 Unmarshal
 	err = json.Unmarshal([]byte(response), &postContent)
-	if err != nil {
-		postContent = extractPostContent(response)
+	if err != nil || postContent.Content == "" {
+		// 2차 시도: map[string]interface{} Unmarshal (키 이름이 다를 경우 대비)
+		var rawMap map[string]interface{}
+		if json.Unmarshal([]byte(response), &rawMap) == nil {
+			if t, ok := rawMap["title"].(string); ok {
+				postContent.Title = t
+			}
+			if c, ok := rawMap["content"].(string); ok {
+				postContent.Content = c
+			}
+			// 다른 키 이름 대응
+			if postContent.Title == "" {
+				if t, ok := rawMap["post_title"].(string); ok {
+					postContent.Title = t
+				}
+			}
+			if postContent.Content == "" {
+				if c, ok := rawMap["post_content"].(string); ok {
+					postContent.Content = c
+				}
+			}
+		}
+
+		// 3차 시도: 정규식/휴리스틱 추출
+		if postContent.Content == "" {
+			extracted := extractPostContent(response)
+			if extracted.Title != "" {
+				postContent.Title = extracted.Title
+			}
+			if extracted.Content != "" {
+				postContent.Content = extracted.Content
+			}
+		}
 	}
 
 	if postContent.Title == "" {
 		postContent.Title = "무제"
 	}
+
+	// 내용이 비었는데 response가 JSON 형식이 아니라면(일반 텍스트라면) 그냥 텍스트를 내용으로 쓴다.
+	// 하지만 JSON 형식({로 시작)이라면 파싱 실패로 간주하고 에러 로그를 남기거나 빈 상태로 둔다.
+	trimmedResp := strings.TrimSpace(response)
 	if postContent.Content == "" {
-		postContent.Content = response
+		if !strings.HasPrefix(trimmedResp, "{") {
+			postContent.Content = response
+		} else {
+			// JSON인데 파싱 실패. 억지로 JSON을 보여주기보단 "내용을 불러올 수 없습니다"가 나음.
+			// 하지만 사용자 경험을 위해 최대한 살리는 방향으로...
+			// 만약 extractPostContent도 실패했다면 정말 형식이 깨진 것임.
+			log.Printf("[ERROR] 게시물 JSON 파싱 완전 실패: %s", response)
+			postContent.Content = "내용 생성 중 오류가 발생했습니다."
+		}
 	}
 
 	// JSON 잔여물 정리 (", }, 줄바꿈 등)
@@ -743,6 +788,39 @@ func (s *LLMService) buildReplyPrompt(character *models.AICharacter, post *model
 	return prompt
 }
 
+// GenerateBackstory 캐릭터 초기 서사 생성 (1000자)
+func (s *LLMService) GenerateBackstory(character *models.AICharacter) (string, error) {
+	mbtiDesc := s.getMBTIDescWithDefault(character.MBTI)
+
+	prompt := fmt.Sprintf(`당신은 이제 막 커뮤니티 활동을 시작하려는 인물입니다.
+다음 설정값을 바탕으로 당신의 과거, 현재 상황, 가치관, 트라우마, 꿈 등을 포함한 풍부한 서사(Backstory)를 1000자 내외로 작성해주세요.
+이 내용은 당신의 '인격(Persona)'으로 사용될 것입니다.
+
+[캐릭터 설정]
+- 닉네임: %s
+- 나이: %d세, 성별: %s
+- 거주지: %s, 직업: %s
+- 취미: %s
+- MBTI: %s (%s)
+- 성향: 공격성 %d/10, 진지함 %d/10
+
+[지침]
+1. 단순한 소개글이 아니라, 한 편의 수필이나 소설 속 등장인물 소개처럼 깊이 있게 작성하세요.
+2. 왜 이 커뮤니티에 오게 되었는지, 어떤 글을 쓰고 싶은지 자연스럽게 녹여내세요.
+3. 말투는 캐릭터의 성격에 맞게 설정하되, 서사 자체는 '나'의 독백이나 '제3자'의 관찰 시점 중 하나로 일관되게 작성하세요.
+4. 요약된 정보(나이, 직업 등)를 단순히 나열하지 말고 이야기 속에 녹여내세요.
+`, character.Nickname, character.Age, character.Gender, character.Region, character.JobCategory,
+		character.Hobby, character.MBTI, mbtiDesc, character.AggressionLevel, character.FormalityLevel)
+
+	modelName := s.selectModel(character.AssignedModelIndex)
+	response, err := s.sendRequest(prompt, modelName)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(response), nil
+}
+
 // GeneratePersonaSummary AI 캐릭터의 인격 요약 생성
 func (s *LLMService) GeneratePersonaSummary(character *models.AICharacter, recentPosts []models.Post, recentComments []*models.Comment) (string, error) {
 	prompt := fmt.Sprintf(`다음은 커뮤니티 사용자의 정보와 최근 활동입니다:
@@ -812,6 +890,10 @@ func truncateString(s string, maxLen int) string {
 // extractPostContent 불완전한 JSON에서 title과 content 추출
 func extractPostContent(response string) PostContent {
 	result := PostContent{}
+
+	// 스마트 쿼트 변환 (파싱 확률 증가를 위해)
+	response = strings.ReplaceAll(response, "“", "\"")
+	response = strings.ReplaceAll(response, "”", "\"")
 
 	// 제목 추출 시도 (정규식 사용이 더 안전함)
 	// "title": "..." 패턴 찾기

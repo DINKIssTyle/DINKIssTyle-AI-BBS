@@ -291,8 +291,11 @@ func (m *ActivityManager) createRandomPost() {
 		return
 	}
 
-	// 닉네임 업데이트 체크
-	m.updateNicknameIfNeeded(character)
+	// 닉네임 업데이트 체크 (서사 생성 실패 시 중단)
+	if !m.updateNicknameIfNeeded(character) {
+		log.Printf("[SKIP] 서사 생성 미완료로 게시물 작성 취소: %s", character.Nickname)
+		return
+	}
 
 	// 캐릭터의 최근 게시물 조회 (전략 4: 참조 범위 확대)
 	recentPosts, _ := m.postService.GetRecentPostsByCharacter(character.ID, 15)
@@ -369,8 +372,11 @@ func (m *ActivityManager) createRandomComment() {
 		return
 	}
 
-	// 닉네임 업데이트 체크
-	m.updateNicknameIfNeeded(character)
+	// 닉네임 업데이트 체크 (서사 생성 실패 시 중단)
+	if !m.updateNicknameIfNeeded(character) {
+		log.Printf("[SKIP] 서사 생성 미완료로 댓글 작성 취소: %s", character.Nickname)
+		return
+	}
 
 	// 기존 댓글 조회
 	existingComments, _ := m.commentService.GetRecentCommentsByPost(post.ID, 10)
@@ -641,10 +647,10 @@ func (m *ActivityManager) checkAndGeneratePersona(character *models.AICharacter)
 	log.Printf("인격 생성/갱신 완료: [%s]\n", character.Nickname)
 }
 
-// updateNicknameIfNeeded "활동전AI" 닉네임 변경
-func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) {
+// updateNicknameIfNeeded "활동전AI" 닉네임 변경 (성공 여부 반환)
+func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) bool {
 	if !strings.HasPrefix(character.Nickname, "활동전AI") {
-		return
+		return true
 	}
 
 	oldNickname := character.Nickname
@@ -666,6 +672,27 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 		err = m.characterService.UpdateCharacter(*character)
 		if err == nil {
 			log.Printf("닉네임 변경 완료: %s -> %s\n", oldNickname, newNickname)
+
+			// 초기 인격 서사 생성
+			log.Printf("초기 인격 서사 생성 시작: %s\n", newNickname)
+			backstory, bErr := m.llmService.GenerateBackstory(character)
+			if bErr == nil {
+				character.PersonaSummary = backstory
+				if uErr := m.characterService.UpdatePersonaSummary(character.ID, backstory); uErr != nil {
+					log.Printf("초기 인격 저장 실패: %v\n", uErr)
+				} else {
+					log.Printf("초기 인격 생성 완료: %s\n", newNickname)
+				}
+			} else {
+				log.Printf("초기 인격 생성 실패: %v\n", bErr)
+			}
+
+			// 실패 시 false 반환 (활동 중단)
+			if bErr != nil {
+				log.Printf("초기 인격 생성 실패: %v\n", bErr)
+				return false
+			}
+
 			success = true
 			break
 		}
@@ -685,7 +712,10 @@ func (m *ActivityManager) updateNicknameIfNeeded(character *models.AICharacter) 
 
 	if !success {
 		log.Printf("닉네임 변경 최종 실패: %s\n", oldNickname)
+		return false
 	}
+
+	return true
 }
 
 // replyToCommentsLoop 본인 글에 달린 댓글에 답글 달기 루프
