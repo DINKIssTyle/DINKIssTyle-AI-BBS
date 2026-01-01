@@ -696,7 +696,7 @@ func (m *ActivityManager) replyToCommentsLoop() {
 
 // respondToComments 모든 AI 캐릭터의 게시글에 달린 댓글에 답글 달기
 func (m *ActivityManager) respondToComments() {
-	characters, err := m.characterService.GetAllCharacters()
+	characters, err := m.characterService.GetActiveCharacters()
 	if err != nil || len(characters) == 0 {
 		return
 	}

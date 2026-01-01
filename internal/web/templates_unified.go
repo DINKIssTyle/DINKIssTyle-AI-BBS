@@ -1399,7 +1399,7 @@ const consoleTemplateUnified = `<!DOCTYPE html>
     </div>
     <div class="console-footer">
         <span id="log-count">로그: 0줄</span>
-        <span>최대 300줄 | 자동 스크롤</span>
+        <span>최대 300줄 | <span id="label-autoscroll" style="cursor: pointer; color: #3fb950; font-weight: bold;">자동 스크롤 ON</span></span>
     </div>
 
     <script>
@@ -1412,6 +1412,7 @@ const consoleTemplateUnified = `<!DOCTYPE html>
         let evtSource = null;
         let logCount = 0;
         const MAX_LOGS = 300;
+        let autoScroll = true;
 
         function addLog(msg, className) {
             const item = document.createElement('div');
@@ -1423,7 +1424,9 @@ const consoleTemplateUnified = `<!DOCTYPE html>
                 consoleBody.removeChild(consoleBody.firstChild);
                 logCount--;
             }
-            consoleBody.scrollTop = consoleBody.scrollHeight;
+            if (autoScroll) {
+                consoleBody.scrollTop = consoleBody.scrollHeight;
+            }
             logCountEl.innerText = '로그: ' + consoleBody.children.length + '줄';
         }
 
@@ -1460,6 +1463,21 @@ const consoleTemplateUnified = `<!DOCTYPE html>
             logCountEl.innerText = '로그: 0줄';
             addLog('콘솔이 지워졌습니다.', 'info');
         };
+
+        const btnAutoScroll = document.getElementById('label-autoscroll');
+        if (btnAutoScroll) {
+            btnAutoScroll.onclick = function() {
+                autoScroll = !autoScroll;
+                if (autoScroll) {
+                    btnAutoScroll.innerText = '자동 스크롤 ON';
+                    btnAutoScroll.style.color = '#3fb950';
+                    consoleBody.scrollTop = consoleBody.scrollHeight;
+                } else {
+                    btnAutoScroll.innerText = '자동 스크롤 OFF';
+                    btnAutoScroll.style.color = '#8b949e';
+                }
+            };
+        }
 
         // 페이지 로드 시 자동 연결
         connect();

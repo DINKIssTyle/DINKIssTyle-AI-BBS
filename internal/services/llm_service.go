@@ -554,42 +554,23 @@ func (s *LLMService) buildPostPrompt(character *models.AICharacter, recentPosts 
 		topicInstruction = fmt.Sprintf("[추천 주제: %s]\n특별히 쓸 내용이 없다면 위 주제를 활용해보세요. 물론 다른 자유로운 주제를 선택해도 좋습니다.", randomTopic)
 	}
 
-	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 인터넷 커뮤니티 게시판 사용자입니다.
-	다음과 같은 기본 정보를 이용하여 게시물의 내용을 작성하세요.
-당신의 캐릭터:
-- 성별: %s, 나이: %d세, 거주지: %s, 취미: %s, 직종: %s
-당신의 성격
-- MBTI: %s (공격성 %d/10, 진지함 %d/10)
+	prompt := fmt.Sprintf(`당신은 %s라는 닉네임의 글 작성자입니다.
+당신은 %d세 %s으로 %s에 거주하며, 취미는 %s, 직종은 %s입니다.
+당신의 MBTI는 %s이며, 공격성은 %d/10, 진지함은 %d/10 입니다.
 글을 작성하고 있는 오늘은 %s, %s 입니다.
-글쓰기 스타일
-%s
+글작성 스타일은 %s입니다.
 
 %s
-
-`, character.Nickname, character.Gender, character.Age, character.Region, character.Hobby,
+`, character.Nickname, character.Age, character.Gender, character.Region, character.Hobby,
 		character.JobCategory, character.MBTI, character.AggressionLevel,
 		character.FormalityLevel, monthStr, timeStr, mbtiDesc, topicInstruction)
 
 	// 인격 요약이 있으면 포함
 	if character.PersonaSummary != "" {
-		prompt += fmt.Sprintf(`[당신의 인격, 캐릭터 정의]
+		prompt += fmt.Sprintf(`[최근 보정 된 당산의 요약 정보]
 %s
 
 `, character.PersonaSummary)
-	}
-
-	// 최근 글 정보 (참고용, 중복 방지를 위해 확인하는 용도)
-	if len(recentPosts) > 0 {
-		prompt += "[최근 게시판 분위기 - 참고만 하세요]\n최근에 올라온 글들입니다:\n"
-		count := 0
-		for _, p := range recentPosts {
-			if count >= 10 {
-				break
-			}
-			prompt += fmt.Sprintf("- %s\n", p.Title)
-			count++
-		}
-		prompt += "\n"
 	}
 
 	// 다른 사람 글에 반응 유도 (전략 3)
