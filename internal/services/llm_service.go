@@ -63,6 +63,31 @@ func (s *LLMService) getMBTIDescWithDefault(mbti string) string {
 	return "다양한 성격의 일반 사용자입니다."
 }
 
+// GetJobKeywordsMap 직종별 키워드 맵 반환 (프롬프트에서 파싱)
+func (s *LLMService) GetJobKeywordsMap() map[string][]string {
+	content := s.getPromptWithDefault("job_keywords", models.DefaultJobKeywords)
+	result := make(map[string][]string)
+
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 {
+			job := strings.TrimSpace(parts[0])
+			keywordsStr := strings.TrimSpace(parts[1])
+			keywords := strings.Split(keywordsStr, ",")
+			for i, kw := range keywords {
+				keywords[i] = strings.TrimSpace(kw)
+			}
+			result[job] = keywords
+		}
+	}
+	return result
+}
+
 // NewLLMService 새 LLM 서비스 생성
 func NewLLMService() *LLMService {
 	return &LLMService{

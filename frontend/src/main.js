@@ -1163,6 +1163,7 @@ const PROMPT_MAP = {
     'system_role': 'prompt-system',
     'topic_hints': 'prompt-topic-hints',
     'post_instruction': 'prompt-post',
+    'job_keywords': 'prompt-job-keywords',
     'comment_instruction': 'prompt-comment',
     'reply_instruction': 'prompt-reply',
     'summary_instruction': 'prompt-summary'

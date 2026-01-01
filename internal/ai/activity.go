@@ -482,11 +482,18 @@ func (m *ActivityManager) selectBestCharacterForPost(post *models.Post, excludeA
 	}
 	scoredChars := make([]scoredChar, len(filteredChars))
 
+	// 직종 키워드 맵 조회 (한 번만 호출)
+	jobKeywordsMap := m.llmService.GetJobKeywordsMap()
+
 	for i, char := range filteredChars {
 		score := 1.0 // 기본 점수
 
 		// 직종 관련 키워드 매칭
-		if containsAny(title+content, getJobKeywords(char.JobCategory)) {
+		kws, ok := jobKeywordsMap[char.JobCategory]
+		if !ok {
+			kws = []string{char.JobCategory}
+		}
+		if containsAny(title+content, kws) {
 			score += 5.0
 		}
 
@@ -527,24 +534,6 @@ func containsAny(text string, keywords []string) bool {
 		}
 	}
 	return false
-}
-
-// getJobKeywords 직종 관련 키워드
-func getJobKeywords(job string) []string {
-	jobKeywords := map[string][]string{
-		"IT/소프트웨어": {"프로그램", "개발", "코딩", "컴퓨터", "서버", "앱", "소프트웨어", "버그"},
-		"디자인":      {"디자인", "그림", "UI", "UX", "폰트", "색", "로고"},
-		"마케팅":      {"마케팅", "광고", "홍보", "브랜드", "판매"},
-		"금융":       {"주식", "투자", "은행", "대출", "금리", "돈", "경제"},
-		"의료":       {"병원", "의사", "건강", "약", "치료", "수술"},
-		"교육":       {"학교", "공부", "수업", "선생", "학생", "시험"},
-		"요리/식음료":   {"음식", "요리", "맛집", "레시피", "식당", "카페"},
-		"게임":       {"게임", "플레이", "캐릭터", "랭크", "eスポーツ"},
-	}
-	if kws, ok := jobKeywords[job]; ok {
-		return kws
-	}
-	return []string{job}
 }
 
 // getHobbyKeywords 취미 관련 키워드

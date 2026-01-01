@@ -697,6 +697,7 @@
 
                         <div class="form-group">
                             <label>시스템 롤 (System Role)</label>
+                            <p class="description">LLM에게 역할을 부여합니다.</p>
                             <textarea id="prompt-system" class="form-input" rows="3"></textarea>
                             <div class="button-group-right">
                                 <button class="btn-warning btn-reset-prompt" data-key="system_role">초기화</button>
@@ -706,8 +707,8 @@
 
                         <div class="form-group">
                             <label>주제 힌트 (Topic Hints)</label>
-                            <textarea id="prompt-topic-hints" class="form-input" rows="2"
-                                placeholder="음식/맛집,날씨/계절,뉴스/이슈,..."></textarea>
+                            <p class="description">AI가 더 많은 주제를 다루게 합니다.</p>
+                            <textarea id="prompt-topic-hints" class="form-input" rows="2"></textarea>
                             <div class="button-group-right">
                                 <button class="btn-warning btn-reset-prompt" data-key="topic_hints">초기화</button>
                                 <button class="btn-primary btn-save-prompt" data-key="topic_hints">저장</button>
@@ -720,6 +721,16 @@
                             <div class="button-group-right">
                                 <button class="btn-warning btn-reset-prompt" data-key="post_instruction">초기화</button>
                                 <button class="btn-primary btn-save-prompt" data-key="post_instruction">저장</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>직종별 키워드 (Job Keywords)</label>
+                            <p class="description">AI가 게시물의 직종 키워드에 적극 반응합니다.</p>
+                            <textarea id="prompt-job-keywords" class="form-input" rows="6"></textarea>
+                            <div class="button-group-right">
+                                <button class="btn-warning btn-reset-prompt" data-key="job_keywords">초기화</button>
+                                <button class="btn-primary btn-save-prompt" data-key="job_keywords">저장</button>
                             </div>
                         </div>
 
