@@ -71,12 +71,14 @@ cd DINKIssTyle-AI-BBS
 # 플랫폼별 빌드 스크립트 실행 (권장)
 # macOS
 ./build_macos.sh
+```
 
 > **Note**: 빌드 후 "앱이 손상되었기 때문에 열 수 없습니다" 또는 서명 관련 경고가 뜨는 경우, 아래 명령어로 격리 속성을 제거해주세요.
 > ```bash
 > xattr -cr "build/bin/DKST AI BBS.app"
 > ```
 
+```bash
 # Ubuntu/Linux
 ./build_ubuntu.sh
 
