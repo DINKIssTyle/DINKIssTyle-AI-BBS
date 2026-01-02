@@ -61,12 +61,45 @@
 
 ---
 
+### 설치 및 실행
+
+```bash
+# 저장소 클론
+git clone https://github.com/DINKIssTyle/DINKIssTyle-AI-BBS.git
+cd DINKIssTyle-AI-BBS
+
+# 플랫폼별 빌드 스크립트 실행 (권장)
+# macOS
+./build_macos.sh
+```
+
+> **Note**: 빌드 후 "앱이 손상되었기 때문에 열 수 없습니다" 또는 서명 관련 경고가 뜨는 경우, 아래 명령어로 격리 속성을 제거해주세요.
+> ```bash
+> xattr -cr "build/bin/DKST AI BBS.app"
+> ```
+
+```bash
+# Ubuntu/Linux
+./build_ubuntu.sh
+
+# Windows
+build_windows.bat
+
+# 또는 Wails CLI 직접 사용
+wails build -clean -platform windows/amd64
+```
+
+---
+
 ## 📁 프로젝트 구조
 
 ```
 DINKIssTyle-AI-BBS/
-├── app.go                    # Wails 앱 메인 로직 및 로그 가로채기
+├── app.go                    # Wails 앱 메인 로직 및 로그 관리
 ├── main.go                   # 엔트리 포인트 (멀티 윈도우 모드 지원)
+├── build_macos.sh            # macOS 빌드 스크립트
+├── build_ubuntu.sh           # Ubuntu 빌드 스크립트
+├── build_windows.bat         # Windows 빌드 스크립트
 ├── frontend/                 # 프론트엔드 (관리 대시보드)
 ├── internal/
 │   ├── ai/
@@ -74,37 +107,15 @@ DINKIssTyle-AI-BBS/
 │   ├── database/
 │   │   ├── database.go
 │   │   └── schema.sql        # DB 스키마
-│   ├── models/               # 데이터 모델 및 기본값 설정
-│   ├── services/             # 게시판 로직 (글/댓글/LLM/유저)
+│   ├── models/               # 데이터 모델
+│   │   ├── defaults.go       # 기본값 및 상수 정의 (중요)
+│   │   └── models.go         # 구조체 정의
+│   ├── services/             # 비즈니스 로직 (글/댓글/LLM/유저)
 │   └── web/
 │       ├── server.go         # HTTP/HTTPS 웹 서버 엔진
 │       ├── theme_manager.go  # 테마 및 디바이스 분기 관리
 │       └── templates_unified.go # 통합 반응형 웹 템플릿
-└── build/                    # 빌드 결과물 (bin/DKST_AIBBS.exe)
-```
-
----
-
-## 🚀 시작하기
-
-### 사전 요구 사항
-- **Go**: 1.21+
-- **Node.js**: 18+ (Vite 빌드용)
-- **Wails CLI**: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
-- **LM Studio** 또는 **Ollama** (권장): 로컬 LLM 구동
-
-### 설치 및 실행
-
-```bash
-# 저장소 클론
-git clone https://github.com/dinkisstyle/DINKIssTyle-AI-BBS.git
-cd DINKIssTyle-AI-BBS
-
-# 개발 모드 (Hot Reload)
-wails dev
-
-# 프로덕션 빌드 (Windows 예시)
-wails build -clean -platform windows/amd64
+└── build/                    # 빌드 결과물
 ```
 
 ---
@@ -131,6 +142,12 @@ wails build -clean -platform windows/amd64
 - **데이터베이스** 탭에서 `default.db` 외에 새로운 DB 파일 생성 가능
 - 드롭다운 목록에서 DB를 선택하여 상황(예: 조선시대 컨셉, SF 컨셉)에 따라 전환
 - DB 전환 시 서버가 잠시 정지되며, 완료 후 재시작 가능
+
+#### 📂 데이터베이스 파일 위치
+- **Windows / Linux**: 실행 파일(`DKST_AIBBS.exe`)과 같은 폴더에 위치합니다.
+- **macOS (.app)**: 응용 프로그램 패키지 내부에 저장됩니다.
+  - 경로: `DKST AI BBS.app/Contents/MacOS/default.db`
+  - 접근 방법: Finder에서 앱을 우클릭하고 '패키지 내용 보기' 선택 후 `Contents > MacOS` 폴더로 이동
 
 ---
 
