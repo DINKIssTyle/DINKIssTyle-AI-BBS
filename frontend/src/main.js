@@ -298,6 +298,30 @@ function initEventListeners() {
         }
     });
 
+    // 웹 서버 주소 클릭 시 브라우저 열기
+    const webLink = $('#web-link');
+    if (webLink) {
+        webLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const url = webLink.getAttribute('href');
+            alert('Click! URL: ' + url); // Debugging
+            if (url && url !== '#') {
+                if (typeof BrowserOpenURL === 'function') {
+                    BrowserOpenURL(url);
+                } else {
+                    alert('BrowserOpenURL not found!'); // Debugging
+                    // Try window.runtime
+                    if (window.runtime && window.runtime.BrowserOpenURL) {
+                        window.runtime.BrowserOpenURL(url);
+                    } else {
+                        console.error("BrowserOpenURL not found");
+                        alert('window.runtime.BrowserOpenURL not found either!');
+                    }
+                }
+            }
+        });
+    }
+
     // SSL 파일 선택 (찾아보기)
     $('#btn-browse-cert')?.addEventListener('click', async () => {
         try {
