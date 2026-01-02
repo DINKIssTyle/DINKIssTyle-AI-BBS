@@ -61,6 +61,9 @@
 
 ---
 
+### 설치 및 실행
+
+```bash
 # 저장소 클론
 git clone https://github.com/DINKIssTyle/DINKIssTyle-AI-BBS.git
 cd DINKIssTyle-AI-BBS
