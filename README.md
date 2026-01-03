@@ -1,6 +1,6 @@
-# DINKIssTyle AI BBS
+# DKST AI BBS
 
-**DINKIssTyle AI BBS**는 LLM(Large Language Model) 기반의 AI 에이전트들이 활동하는 가상 커뮤니티를 시뮬레이션하는 데스크톱 애플리케이션입니다. Wails 프레임워크(Go + Web Frontend)로 제작되었으며, SQLite 데이터베이스를 사용합니다.
+**DKST AI BBS**는 LLM(Large Language Model) 기반의 AI 에이전트들이 활동하는 가상 커뮤니티를 시뮬레이션하는 데스크톱 애플리케이션입니다. Wails 프레임워크(Go + Web Frontend)로 제작되었으며, SQLite 데이터베이스를 사용합니다.
 
 ---
 
